@@ -93,31 +93,21 @@ open class StatementProxy internal constructor(
 
     override fun addBatch(sql: String) {
         batchSqls += sql
-        target.addBatch(sql)
     }
 
     override fun clearBatch() {
         batchSqls.clear()
-        target.clearBatch()
     }
 
-    override fun executeBatch(): IntArray {
-        batchSqls.forEach {
-            intercept(it)
-        }
-        batchSqls.clear()
-        return target.executeBatch()
-    }
+    override fun executeBatch(): IntArray =
+        proxyCon
+            .executionContext
+            .execute(batchSqls, this)
+            .also {
+                batchSqls.clear()
+            }
 
     override fun executeLargeBatch(): LongArray {
-        batchSqls.forEach {
-            intercept(it)
-        }
-        batchSqls.clear()
-        return target.executeLargeBatch()
-    }
-
-    private fun intercept(sql: String) {
-
+        throw UnsupportedOperationException()
     }
 }

@@ -5,6 +5,10 @@ import org.babyfish.kmodel.jdbc.SqlLexer
 import java.lang.StringBuilder
 import java.sql.SQLException
 import java.util.*
+import java.util.concurrent.locks.ReentrantReadWriteLock
+import kotlin.collections.LinkedHashSet
+import kotlin.concurrent.read
+import kotlin.concurrent.write
 
 abstract class Statement(
         val tokens: List<Token>,
@@ -43,7 +47,17 @@ abstract class Statement(
         )
 }
 
-internal fun parseSqlStatements(sql: String): List<Statement> {
+internal fun parseSqlStatements(sql: String): List<Statement> =
+    STATEMENTS_LOCK.read {
+        STATEMENTS_MAP[sql]
+    } ?: STATEMENTS_LOCK.write {
+        STATEMENTS_MAP[sql]
+            ?: parseSqlStatementsImpl(sql).also {
+                STATEMENTS_MAP[sql] = it
+            }
+    }
+
+private fun parseSqlStatementsImpl(sql: String): List<Statement> {
     val tokenStream = CommonTokenStream(
             SqlLexer(
                     CharStreams.fromString(sql)
@@ -73,4 +87,16 @@ private class ErrorListenerImpl(
     ) {
         illegalSql(sql, msg, line, charPositionInLine)
     }
+}
+
+private val STATEMENTS_LOCK = ReentrantReadWriteLock()
+
+private val STATEMENTS_MAP = object: LinkedHashMap<String, List<Statement>>(
+    (Runtime.getRuntime().availableProcessors() * 10 * 4 + 2) / 3,
+    .75F,
+    true
+) {
+    override fun removeEldestEntry(
+        eldest: MutableMap.MutableEntry<String, List<Statement>>?
+    ): Boolean = true
 }

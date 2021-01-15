@@ -24,14 +24,15 @@ abstract class AbstractExecTest : AbstractJdbcTest() {
                         |    references category(id)
                         |)""".trimMargin()
                 )
+                executeBatch()
                 addBatch("insert into category values(1, 'Food')")
                 addBatch("insert into category values(2, 'Office')")
                 addBatch("insert into product values(1, 'Polk', 20, 1)")
                 addBatch("insert into product values(2, 'Beef', 30, 1)")
                 addBatch("insert into product values(3, 'Pen', 30, 2)")
                 addBatch("insert into product values(4, 'Pencil', 5, 2)")
+                executeBatch()
             }
-            .executeBatch()
     }
 }
 

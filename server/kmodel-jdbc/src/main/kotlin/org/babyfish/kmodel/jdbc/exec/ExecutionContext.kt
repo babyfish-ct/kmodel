@@ -6,6 +6,7 @@ import org.babyfish.kmodel.jdbc.StatementProxy
 import org.babyfish.kmodel.jdbc.metadata.QualifiedName
 import org.babyfish.kmodel.jdbc.metadata.Table
 import org.babyfish.kmodel.jdbc.metadata.tableManager
+import org.babyfish.kmodel.jdbc.sql.parseSqlStatements
 import java.sql.ResultSet
 import java.sql.SQLException
 
@@ -38,6 +39,41 @@ internal class ExecutionContext(
             isResultSet()
         }
     }
+
+    fun execute(
+        sqls: List<String>,
+        statementProxy: StatementProxy
+    ): IntArray =
+        when {
+            sqls.isEmpty() ->
+                intArrayOf()
+            sqls.size == 1 -> {
+                execute(sqls[0], statementProxy)
+                intArrayOf(
+                    getUpdateCount()
+                )
+            } else -> {
+                this.statementProxy = statementProxy
+                plans = sqls.flatMap {
+                    statementProxy.targetCon.executionPlans(it)
+                        ?: parseSqlStatements(it) // parsed result has cache, won't really parse again
+                            .map {  stmt ->
+                                MutationPlan(stmt)
+                            }
+                }
+                planIndex = 0
+                val updateCounts = mutableListOf<Int>()
+                while (true) {
+                    val updatedCount = getUpdateCount()
+                    if (updatedCount == -1) {
+                        break
+                    }
+                    updateCounts += updatedCount
+                    getMoreResults()
+                }
+                updateCounts.toIntArray()
+            }
+        }
 
     fun getMoreResults(): Boolean {
         val stmtProxy = statementProxy ?: noExecutedStatement()
