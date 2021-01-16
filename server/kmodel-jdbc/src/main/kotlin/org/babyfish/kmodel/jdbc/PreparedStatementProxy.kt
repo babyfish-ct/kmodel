@@ -1,5 +1,7 @@
 package org.babyfish.kmodel.jdbc
 
+import org.babyfish.kmodel.jdbc.exec.Batch
+import org.babyfish.kmodel.jdbc.exec.MutableParameters
 import java.io.InputStream
 import java.io.Reader
 import java.math.BigDecimal
@@ -10,22 +12,20 @@ import java.sql.Date
 import java.util.*
 
 class PreparedStatementProxy internal constructor(
-        proxyCon: ConnectionProxy,
-        target: PreparedStatement,
-        internal val sql: String
+    proxyCon: ConnectionProxy,
+    target: PreparedStatement,
+    private val sql: String
 ) : StatementProxy(
     proxyCon,
     target
 ), PreparedStatement by target {
 
-    internal val parameters = mutableListOf<Any?>()
-    
-    internal val parameterSetters = mutableListOf<(PreparedStatement.(Int) -> Unit)?>()
+    internal val parameters = MutableParameters()
 
     init {
         (target as LazyProxy<PreparedStatement>).addTargetInitializedListener {
-            for (paramIndex in 1 until parameterSetters.size) {
-                parameterSetters[paramIndex]?.invoke(
+            for (paramIndex in 1 until parameters.setters.size) {
+                parameters.setters[paramIndex]?.invoke(
                     it, paramIndex
                 )
             }
@@ -336,7 +336,11 @@ class PreparedStatementProxy internal constructor(
     }
 
     override fun execute(): Boolean =
-        proxyCon.executionContext.execute(sql, this)
+        proxyCon.executionContext.execute(
+            sql,
+            parameters.toReadonly(),
+            this
+        )
 
     override fun executeUpdate(): Int =
         if (execute()) {
@@ -349,20 +353,34 @@ class PreparedStatementProxy internal constructor(
         return target.executeLargeUpdate()
     }
 
+    override fun addBatch() {
+        batches += Batch(
+            sql = sql,
+            parameters = parameters.toReadonly()
+        )
+    }
+
+    // This override method looks very boring, but it's necessary
+    //
+    // kotlin the priority of kotlin delegate
+    // is higher than the implementation of super class.
+    override fun executeBatch(): IntArray =
+        super.executeBatch()
+
     private fun setParameter(
             parameterIndex: Int,
             value: Any?,
             setter: PreparedStatement.(Int) -> Unit
     ) {
-        if (parameterSetters.size <= parameterIndex) {
-            for (i in parameters.size..parameterIndex + 1) {
-                parameters += null as Any?
+        if (parameters.setters.size <= parameterIndex) {
+            for (i in parameters.values.size..parameterIndex + 1) {
+                parameters.values += null as Any?
             }
-            for (i in parameterSetters.size..parameterIndex + 1) {
-                parameterSetters += null as (PreparedStatement.(Int) -> Unit)?
+            for (i in parameters.setters.size..parameterIndex + 1) {
+                parameters.setters += null as (PreparedStatement.(Int) -> Unit)?
             }
         }
-        parameters[parameterIndex] = value
-        parameterSetters[parameterIndex] = setter
+        parameters.values[parameterIndex] = value
+        parameters.setters[parameterIndex] = setter
     }
 }

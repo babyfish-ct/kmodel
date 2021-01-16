@@ -1,6 +1,5 @@
 package org.babyfish.kmodel.jdbc.exec
 
-import org.babyfish.kmodel.jdbc.PreparedStatementProxy
 import org.babyfish.kmodel.jdbc.SqlLexer
 import org.babyfish.kmodel.jdbc.StatementProxy
 import org.babyfish.kmodel.jdbc.metadata.Column
@@ -130,14 +129,17 @@ class InsertPlan(
         return Row(pkValueMap, otherValueMap)
     }
 
-    override fun execute(statementProxy: StatementProxy): DMLMutationResult {
+    override fun execute(
+        statementProxy: StatementProxy,
+        parameters: Parameters?
+    ): DMLMutationResult {
         val conflictPolicy = statement.conflictPolicy
         val beforeRowMap = if (conflictPolicy === null) {
             mutableMapOf()
         } else {
             imageQuery.executeQuery(
                 statementProxy.targetCon,
-                (statementProxy as? PreparedStatementProxy)?.parameterSetters
+                parameters?.setters
             ) {
                 mapExtraRow(it)
             }
@@ -148,7 +150,7 @@ class InsertPlan(
                 conflictKeyValueIndices.mapIndexed { keyIndex, valueIndex ->
                     literal(
                         it.values[valueIndex],
-                        (statementProxy as? PreparedStatementProxy)?.parameters
+                        parameters?.values
                     ).let {
                         standardizeValue(
                             it,
@@ -158,7 +160,7 @@ class InsertPlan(
                 }
             }
         val updateCount = if (conflictPolicy === null) {
-            mutate(statementProxy, statement)
+            mutate(statementProxy, statement, parameters)
         } else {
             val updateMap = mutableMapOf<List<Any?>, InsertStatement.Row>()
             for (beforeRow in beforeRowMap.values) {
@@ -195,8 +197,8 @@ class InsertPlan(
                     .build()
                     .executeUpdate(
                         statementProxy.targetCon,
-                        (statementProxy as? PreparedStatementProxy)
-                            ?.parameterSetters
+                        parameters
+                            ?.setters
                             ?: emptyList()
                     )
             }
@@ -209,8 +211,8 @@ class InsertPlan(
                         updateStatement(rowKey, row)
                             ?.executeUpdate(
                                 statementProxy.targetCon,
-                                (statementProxy as? PreparedStatementProxy)
-                                    ?.parameterSetters
+                                parameters
+                                    ?.setters
                                     ?: emptyList()
                             )
                             ?: 0

@@ -11,7 +11,8 @@ class UpdatePlan(
     con: Connection,
     statement: UpdateStatement
 ) : AbstractDMLMutationPlan<UpdateStatement>(
-    con, statement
+    con,
+    statement
 ) {
     private val mutationStatementBuilderTemplate =
         ExtraStatementBuilder().apply {
@@ -61,10 +62,13 @@ class UpdatePlan(
         )
     }
 
-    override fun execute(statementProxy: StatementProxy): DMLMutationResult {
+    override fun execute(
+        statementProxy: StatementProxy,
+        parameters: Parameters?
+    ): DMLMutationResult {
         val beforeRowMap = imageQuery.executeQuery(
             statementProxy.targetCon,
-            (statementProxy as? PreparedStatementProxy)?.parameterSetters
+            parameters?.setters
         ) {
             mapExtraRow(it)
         }
@@ -79,7 +83,7 @@ class UpdatePlan(
                 .build()
                 .executeUpdate(
                     statementProxy.targetCon,
-                    (statementProxy as? PreparedStatementProxy)?.parameterSetters
+                    parameters?.setters
                 )
         }
         return DMLMutationResult(

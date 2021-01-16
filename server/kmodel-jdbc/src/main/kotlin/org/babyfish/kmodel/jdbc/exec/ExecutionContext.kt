@@ -8,6 +8,7 @@ import org.babyfish.kmodel.jdbc.metadata.Table
 import org.babyfish.kmodel.jdbc.metadata.tableManager
 import org.babyfish.kmodel.jdbc.sql.*
 import org.babyfish.kmodel.jdbc.sql.parseSqlStatements
+import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.SQLException
 
@@ -17,9 +18,9 @@ internal class ExecutionContext(
 
     private var statementProxy: StatementProxy? = null
 
-    private var plans: List<ExecutionPlan<*>>? = null
+    private var executions: List<Execution>? = null
 
-    private var planIndex = 0
+    private var index = 0
 
     private val beforeImageMap =
         mutableMapOf<
@@ -28,40 +29,63 @@ internal class ExecutionContext(
         >()
 
     fun execute(
-            sql: String,
-            statementProxy: StatementProxy
+        sql: String,
+        parameters: Parameters?,
+        statementProxy: StatementProxy
     ): Boolean {
         this.statementProxy = statementProxy
-        plans = statementProxy.targetCon.executionPlans(sql)
-        planIndex = 0
-        return if (plans === null) {
-            statementProxy.target.execute(sql)
+        executions = statementProxy
+            .targetCon
+            .executionPlans(sql)
+            ?.map {
+                Execution(
+                    plan = it,
+                    parameters = parameters
+                )
+            }
+
+        index = 0
+        return if (executions === null) {
+            if (parameters === null) {
+                statementProxy.target.execute(sql)
+            } else {
+                val targetPreparedStatement =
+                    statementProxy.target as PreparedStatement
+                for (parameterIndex in 1 until parameters.setters.size) {
+                    val setter = parameters.setters[parameterIndex]
+                    if (setter !== null) {
+                        targetPreparedStatement
+                            .setter(parameterIndex)
+                    }
+                }
+                targetPreparedStatement.execute()
+            }
         } else {
             isResultSet()
         }
     }
 
     fun execute(
-        sqls: List<String>,
+        batches: List<Batch>,
         statementProxy: StatementProxy
     ): IntArray =
         when {
-            sqls.isEmpty() ->
+            batches.isEmpty() ->
                 intArrayOf()
-            sqls.size == 1 -> {
-                execute(sqls[0], statementProxy)
+            batches.size == 1 -> {
+                execute(batches[0].sql, batches[0].parameters, statementProxy)
                 intArrayOf(
                     getUpdateCount()
                 )
             } else -> {
                 var hasDdl = false
                 this.statementProxy = statementProxy
-                plans = sqls.flatMap {
-                    val newStatements = parseSqlStatements(it)
+                executions = batches.flatMap {
+                    val newStatements = parseSqlStatements(it.sql)
                     if (hasDdl && newStatements.any { stmt -> stmt is AbstractDMLMutationStatement }) {
-                        illegalSql(it, "Cannot mix DDL and DML mutation in one statement batch")
+                        illegalSql(it.sql, "Cannot mix DDL and DML mutation in one statement batch")
                     }
-                    val newPlans = statementProxy.targetCon.executionPlans(it)
+                    val newPlans = statementProxy.targetCon.executionPlans(it.sql)
                         ?: newStatements
                             .map {  stmt ->
                                 MutationPlan(stmt)
@@ -69,9 +93,11 @@ internal class ExecutionContext(
                     hasDdl = hasDdl || newPlans.any { plan ->
                         plan is MutationPlan && plan.statement is DdlStatement
                     }
-                    newPlans
+                    newPlans.map { plan ->
+                        Execution(plan, it.parameters)
+                    }
                 }
-                planIndex = 0
+                index = 0
                 val updateCounts = mutableListOf<Int>()
                 while (true) {
                     val updatedCount = getUpdateCount()
@@ -87,25 +113,28 @@ internal class ExecutionContext(
 
     fun getMoreResults(): Boolean {
         val stmtProxy = statementProxy ?: noExecutedStatement()
-        return if (plans == null) {
+        return if (executions == null) {
             stmtProxy.target.moreResults
         } else {
-            planIndex++
+            index++
             isResultSet()
         }
     }
 
     fun getResultSet(): ResultSet? {
         val stmtProxy = statementProxy ?: noExecutedStatement()
-        val plans = this.plans
-        return if (plans == null) {
+        val executions = this.executions
+        return if (executions == null) {
             stmtProxy.target.resultSet
         } else {
-            return if (planIndex >= plans.size || plans[planIndex] !is SelectPlan) {
+            return if (index >= executions.size || executions[index].plan !is SelectPlan) {
                 null
             } else {
-                plans[planIndex].let {
-                    (it as SelectPlan).execute(stmtProxy)
+                executions[index].let {
+                    (it.plan as SelectPlan).execute(
+                        stmtProxy,
+                        it.parameters
+                    )
                 }
             }
         }
@@ -113,15 +142,15 @@ internal class ExecutionContext(
 
     fun getUpdateCount(): Int {
         val stmtProxy = statementProxy ?: noExecutedStatement()
-        val plans = this.plans
-        return if (plans == null) {
+        val executions = this.executions
+        return if (executions == null) {
             stmtProxy.target.updateCount
         } else {
-            return if (planIndex >= plans.size || plans[planIndex] is SelectPlan) {
+            return if (index >= executions.size || executions[index].plan is SelectPlan) {
                 -1
             } else {
-                plans[planIndex].let {
-                    val result = it.execute(stmtProxy)
+                executions[index].let {
+                    val result = it.plan.execute(stmtProxy, it.parameters)
                     if (result is DMLMutationResult) {
                         beforeImageMap
                             .computeIfAbsent(result.table.qualifiedName) {
@@ -163,9 +192,9 @@ internal class ExecutionContext(
     }
 
     private fun isResultSet(): Boolean {
-        val plans = this.plans ?: error("Internal bug")
-        return if (planIndex < plans.size) {
-            plans[planIndex] is SelectPlan
+        val executions = this.executions ?: error("Internal bug")
+        return if (index < executions.size) {
+            executions[index].plan is SelectPlan
         } else {
             false
         }
@@ -195,7 +224,7 @@ internal class ExecutionContext(
                 append(" where ")
                 addConditionByPkValues(
                     table,
-                    beforeImageMap[table.qualifiedName]!!.keys
+                    beforeRowMap.keys
                 ) { row, pkColumnIndex, _ ->
                     row[pkColumnIndex]
                 }
@@ -212,4 +241,9 @@ internal class ExecutionContext(
                 )
             }
     }
+
+    private data class Execution(
+        val plan: ExecutionPlan<*>,
+        val parameters: Parameters?
+    )
 }

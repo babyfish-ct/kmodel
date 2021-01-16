@@ -1,5 +1,6 @@
 package org.babyfish.kmodel.jdbc
 
+import org.babyfish.kmodel.jdbc.exec.Batch
 import java.lang.UnsupportedOperationException
 import java.sql.Connection
 import java.sql.Statement
@@ -9,13 +10,17 @@ open class StatementProxy internal constructor(
         internal open val target: Statement
 ): Statement by target {
 
-    private val batchSqls = mutableListOf<String>()
+    internal val batches = mutableListOf<Batch>()
 
     internal val targetCon: Connection
         get() = proxyCon.target
 
     override fun execute(sql: String): Boolean =
-        proxyCon.executionContext.execute(sql, this)
+        proxyCon.executionContext.execute(
+            sql,
+            null,
+            this
+        )
 
     override fun execute(
         sql: String,
@@ -92,19 +97,19 @@ open class StatementProxy internal constructor(
     }
 
     override fun addBatch(sql: String) {
-        batchSqls += sql
+        batches += Batch(sql)
     }
 
     override fun clearBatch() {
-        batchSqls.clear()
+        batches.clear()
     }
 
     override fun executeBatch(): IntArray =
         proxyCon
             .executionContext
-            .execute(batchSqls, this)
+            .execute(batches, this)
             .also {
-                batchSqls.clear()
+                batches.clear()
             }
 
     override fun executeLargeBatch(): LongArray {

@@ -6,6 +6,7 @@ import org.babyfish.kmodel.jdbc.metadata.tableManager
 import org.babyfish.kmodel.jdbc.sql.AbstractDMLMutationStatement
 import java.lang.IllegalArgumentException
 import java.sql.Connection
+import java.sql.PreparedStatement
 
 abstract class AbstractDMLMutationPlan<S: AbstractDMLMutationStatement>(
     con: Connection,

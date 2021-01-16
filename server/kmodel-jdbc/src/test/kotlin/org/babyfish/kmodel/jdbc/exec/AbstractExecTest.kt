@@ -2,6 +2,7 @@ package org.babyfish.kmodel.jdbc.exec
 
 import org.babyfish.kmodel.jdbc.AbstractJdbcTest
 import org.babyfish.kmodel.jdbc.metadata.QualifiedName
+import java.math.BigDecimal
 import java.sql.Connection
 
 abstract class AbstractExecTest : AbstractJdbcTest() {
@@ -24,15 +25,48 @@ abstract class AbstractExecTest : AbstractJdbcTest() {
                         |    references category(id)
                         |)""".trimMargin()
                 )
-                executeBatch()
-                addBatch("insert into category values(1, 'Food')")
-                addBatch("insert into category values(2, 'Office')")
-                addBatch("insert into product values(1, 'Polk', 20, 1)")
-                addBatch("insert into product values(2, 'Beef', 30, 1)")
-                addBatch("insert into product values(3, 'Pen', 30, 2)")
-                addBatch("insert into product values(4, 'Pencil', 5, 2)")
+            }
+            .executeBatch()
+        connection
+            .prepareStatement(
+                "insert into category values(?, ?)"
+            )
+            .apply {
+                setLong(1, 1)
+                setString(2, "Food")
+                addBatch()
+                setLong(1, 2)
+                setString(2, "Office")
+                addBatch()
                 executeBatch()
             }
+            //.executeBatch()
+        connection
+            .prepareStatement(
+                "insert into product values(?, ?, ?, ?)"
+            ).apply {
+                setLong(1, 1)
+                setString(2, "Polk")
+                setBigDecimal(3, BigDecimal("20"))
+                setLong(4, 1)
+                addBatch()
+                setLong(1, 2)
+                setString(2, "Beef")
+                setBigDecimal(3, BigDecimal("30"))
+                setLong(4, 1)
+                addBatch()
+                setLong(1, 3)
+                setString(2, "Pen")
+                setBigDecimal(3, BigDecimal("30"))
+                setLong(4, 2)
+                addBatch()
+                setLong(1, 4)
+                setString(2, "Pencil")
+                setBigDecimal(3, BigDecimal("5"))
+                setLong(4, 2)
+                addBatch()
+            }
+            .executeBatch()
     }
 }
 

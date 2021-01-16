@@ -36,10 +36,13 @@ class DeletePlan(
         )
     }
 
-    override fun execute(statementProxy: StatementProxy): DMLMutationResult {
+    override fun execute(
+        statementProxy: StatementProxy,
+        parameters: Parameters?
+    ): DMLMutationResult {
         val beforeRowMap = imageQuery.executeQuery(
             statementProxy.targetCon,
-            (statementProxy as? PreparedStatementProxy)?.parameterSetters
+            parameters?.setters
         ) {
             mapExtraRow(it)
         }
@@ -54,7 +57,7 @@ class DeletePlan(
                 .build()
                 .executeUpdate(
                     statementProxy.targetCon,
-                    (statementProxy as? PreparedStatementProxy)?.parameterSetters
+                    parameters?.setters
                 )
         }
         return DMLMutationResult(

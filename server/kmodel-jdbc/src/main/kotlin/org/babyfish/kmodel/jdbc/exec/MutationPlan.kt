@@ -8,7 +8,8 @@ class MutationPlan(
 ) : ExecutionPlan<Int> {
 
     override fun execute(
-        statementProxy: StatementProxy
+        statementProxy: StatementProxy,
+        parameters: Parameters?
     ): Int =
-        mutate(statementProxy, statement)
+        mutate(statementProxy, statement, parameters)
 }

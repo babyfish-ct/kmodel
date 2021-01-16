@@ -11,7 +11,8 @@ import kotlin.concurrent.write
 interface ExecutionPlan<R> {
 
     fun execute(
-        statementProxy: StatementProxy
+        statementProxy: StatementProxy,
+        parameters: Parameters?
     ): R
 }
 
