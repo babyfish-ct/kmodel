@@ -172,19 +172,24 @@ class InsertPlan(
                         }
                 }
                 insertMap.remove(rowKey)?.let {
-                    updateMap[rowKey] = it
+                    if (conflictPolicy.updatedActions.isNotEmpty()) {
+                        updateMap[rowKey] = it
+                    }
                 }
             }
             val insertCount = if (insertMap.isEmpty()) {
                 0
             } else {
+                var addComma = false
                 insertStatementBuilderTemplate
                     .clone()
                     .apply {
                         for (row in insertMap.values) {
+                            append(", ", addComma)
                             append("(")
                             append(row.values, statement)
                             append(")")
+                            addComma = true
                         }
                     }
                     .build()
@@ -217,7 +222,13 @@ class InsertPlan(
         return DMLMutationResult(
             table = table,
             updateCount = updateCount,
-            beforeRowMap = beforeRowMap.let {
+            beforeRowMap = if (
+                conflictPolicy !== null &&
+                conflictPolicy.updatedActions.isEmpty()) {
+                mutableMapOf()
+            } else {
+                beforeRowMap
+            }.let {
                 val map = it as MutableMap<List<Any>, Row?>
                 for (pkValues in insertMap.keys) {
                     map[pkValues] = null
@@ -385,7 +396,7 @@ class InsertPlan(
                                 specialUpdatedValues += SpecialUpdatedValue(
                                     fromTokenIndex = channelIndex,
                                     toTokenIndex = tokenIndex + 1,
-                                    identifier = channelIdentifier
+                                    identifier = token.text
                                 )
                             }
                             channel = UpdatedValueChannel.NORMAL

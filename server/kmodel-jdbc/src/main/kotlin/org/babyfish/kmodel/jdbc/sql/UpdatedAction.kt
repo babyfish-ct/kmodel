@@ -60,7 +60,7 @@ internal class UpdatedActionListBuilder(
                     columnRange = columnRange!!,
                     valueRange = valueRange
             )
-            columnIndex = -1
+            columnIndex = index + 1
             columnRange = null
             assignIndex = -1
         }

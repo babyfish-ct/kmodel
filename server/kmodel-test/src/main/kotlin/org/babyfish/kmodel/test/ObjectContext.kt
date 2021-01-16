@@ -29,7 +29,11 @@ class ObjectContext<O> internal constructor(
             this,
             prop,
             value?.let {
-                prop.get(it)
+                if (it !== null) {
+                    prop.get(it)
+                } else {
+                    null
+                }
             } as T
         ).contextAction()
     }
@@ -43,7 +47,11 @@ class ObjectContext<O> internal constructor(
             prop,
             value
                 ?.let {
-                    prop.get(it)
+                    if (it !== null) {
+                        prop.get(it)
+                    } else {
+                        null
+                    }
                 }?.asList()
         ).contextAction()
     }
@@ -57,8 +65,18 @@ class ObjectContext<O> internal constructor(
             prop,
             value
                 ?.let {
-                    prop.get(it)
+                    if (it !== null) {
+                        prop.get(it)
+                    } else {
+                        null
+                    }
                 }
         ).contextAction()
     }
+}
+
+inline fun <O> ObjectContext<O?>.asNonNull(
+    contextAction: ObjectContext<O>.() -> Unit
+) {
+    (this as ObjectContext<O>).contextAction()
 }

@@ -6,6 +6,7 @@ import org.babyfish.kmodel.jdbc.StatementProxy
 import org.babyfish.kmodel.jdbc.metadata.QualifiedName
 import org.babyfish.kmodel.jdbc.metadata.Table
 import org.babyfish.kmodel.jdbc.metadata.tableManager
+import org.babyfish.kmodel.jdbc.sql.*
 import org.babyfish.kmodel.jdbc.sql.parseSqlStatements
 import java.sql.ResultSet
 import java.sql.SQLException
@@ -53,13 +54,22 @@ internal class ExecutionContext(
                     getUpdateCount()
                 )
             } else -> {
+                var hasDdl = false
                 this.statementProxy = statementProxy
                 plans = sqls.flatMap {
-                    statementProxy.targetCon.executionPlans(it)
-                        ?: parseSqlStatements(it) // parsed result has cache, won't really parse again
+                    val newStatements = parseSqlStatements(it)
+                    if (hasDdl && newStatements.any { stmt -> stmt is AbstractDMLMutationStatement }) {
+                        illegalSql(it, "Cannot mix DDL and DML mutation in one statement batch")
+                    }
+                    val newPlans = statementProxy.targetCon.executionPlans(it)
+                        ?: newStatements
                             .map {  stmt ->
                                 MutationPlan(stmt)
                             }
+                    hasDdl = hasDdl || newPlans.any { plan ->
+                        plan is MutationPlan && plan.statement is DdlStatement
+                    }
+                    newPlans
                 }
                 planIndex = 0
                 val updateCounts = mutableListOf<Int>()

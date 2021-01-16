@@ -50,6 +50,13 @@ private fun createExecutionPlans(
     sql: String
 ): List<ExecutionPlan<*>> {
     val sqlStatements = parseSqlStatements(sql)
+    for (i in sqlStatements.indices) {
+        for (ii in i + 1 until sqlStatements.size) {
+            if (!areCompatible(sqlStatements[i], sqlStatements[ii])) {
+                illegalSql(sql, "Cannot mix DDL and DML mutation in one statement")
+            }
+        }
+    }
     val requireInterceptor = sqlStatements.any {
         it is InsertStatement || it is UpdateStatement || it is DeleteStatement
     }
@@ -79,3 +86,18 @@ private data class PlanKey(
     val userName: String,
     val sql: String
 )
+
+private inline fun areCompatible(
+    statement1: Statement,
+    statement2: Statement
+): Boolean =
+    when {
+        statement1 is AbstractDMLMutationStatement &&
+                statement2 is DdlStatement ->
+            false
+        statement1 is DdlStatement &&
+                statement2 is AbstractDMLMutationStatement ->
+            false
+        else ->
+            true
+    }

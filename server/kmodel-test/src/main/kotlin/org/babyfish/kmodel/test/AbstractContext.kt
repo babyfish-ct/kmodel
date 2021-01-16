@@ -2,7 +2,9 @@ package org.babyfish.kmodel.test
 
 import org.junit.ComparisonFailure
 import java.lang.IllegalArgumentException
+import java.math.BigDecimal
 import java.util.regex.Pattern
+import kotlin.math.max
 import kotlin.reflect.KProperty1
 import kotlin.test.DefaultAsserter
 import kotlin.test.fail
@@ -24,6 +26,11 @@ abstract class AbstractContext<T> internal constructor(
 
     infix fun eq(value: T?) {
         if (this.value != value) {
+            if (this.value is BigDecimal &&
+                value is BigDecimal &&
+                this.value.compareTo(value) == 0) {
+                return
+            }
             throw ComparisonFailure(
                 "Illegal value of $this",
                 value.toString(),

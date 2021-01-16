@@ -21,6 +21,13 @@ class TableManager internal constructor(
 
     private val insensitiveTableMap = mutableMapOf<QualifiedName, Table>()
 
+    fun evict() {
+        readWriteLock.write {
+            tableMap.clear()
+            insensitiveTableMap.clear()
+        }
+    }
+
     operator fun get(con: Connection, name: String): Table {
         val conUrl = con.metaData.url
         val conUser = con.metaData.userName
