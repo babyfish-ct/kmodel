@@ -4,8 +4,12 @@ import org.antlr.v4.runtime.Token
 import org.babyfish.kmodel.jdbc.SqlLexer
 
 internal class InsertStatementBuilder(
-        private val fullSql: String
-): StatementBuilder<InsertStatementBuilder.Channel>(true) {
+    baseParamOffset: Int,
+    private val fullSql: String
+): StatementBuilder<InsertStatementBuilder.Channel>(
+    baseParamOffset,
+    true
+) {
 
     private var tableFromIndex = -1
 

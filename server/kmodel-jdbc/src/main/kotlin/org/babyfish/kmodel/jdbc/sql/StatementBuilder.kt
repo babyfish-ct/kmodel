@@ -5,7 +5,8 @@ import org.babyfish.kmodel.jdbc.SqlLexer
 import java.util.*
 
 internal abstract class StatementBuilder<C: ChannelType>(
-        private val useDepth: Boolean
+    private val baseParamOffset: Int,
+    private val useDepth: Boolean
 ) {
 
     private val _tokens = mutableListOf<Token>()
@@ -17,7 +18,7 @@ internal abstract class StatementBuilder<C: ChannelType>(
     private var _depth = 0
 
     private val _paramOffsetMap = TreeMap<Int, Int>().also {
-        it[0] = 1
+        it[0] = baseParamOffset
     }
 
     val tokens: List<Token>
@@ -45,7 +46,8 @@ internal abstract class StatementBuilder<C: ChannelType>(
         }
         val index = _tokens.size
         if (token.text == "?") {
-            _paramOffsetMap[index + 1] = _paramOffsetMap.size + 1
+            _paramOffsetMap[index + 1] =
+                baseParamOffset + _paramOffsetMap.size
         }
         if (token.type == SqlLexer.IDENTIFIER && depth == 0) {
             for (chIdx in _channels.indices) {

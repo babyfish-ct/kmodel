@@ -3,8 +3,12 @@ package org.babyfish.kmodel.jdbc.sql
 import org.antlr.v4.runtime.Token
 
 internal class UpdateStatementBuilder(
-        private val fullSql: String
-) : StatementBuilder<UpdateStatementBuilder.Channel>(true) {
+    baseParamOffset: Int,
+    private val fullSql: String
+) : StatementBuilder<UpdateStatementBuilder.Channel>(
+    baseParamOffset,
+    true
+) {
 
     private var setIndex = -1
 

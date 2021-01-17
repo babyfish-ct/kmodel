@@ -39,6 +39,7 @@ internal class ExecutionContext(
             .executionPlans(sql)
             ?.map {
                 Execution(
+                    batchIndex = 0,
                     plan = it,
                     parameters = parameters
                 )
@@ -69,46 +70,51 @@ internal class ExecutionContext(
         batches: List<Batch>,
         statementProxy: StatementProxy
     ): IntArray =
-        when {
-            batches.isEmpty() ->
-                intArrayOf()
-            batches.size == 1 -> {
-                execute(batches[0].sql, batches[0].parameters, statementProxy)
-                intArrayOf(
-                    getUpdateCount()
-                )
-            } else -> {
-                var hasDdl = false
-                this.statementProxy = statementProxy
-                executions = batches.flatMap {
-                    val newStatements = parseSqlStatements(it.sql)
-                    if (hasDdl && newStatements.any { stmt -> stmt is AbstractDMLMutationStatement }) {
-                        illegalSql(it.sql, "Cannot mix DDL and DML mutation in one statement batch")
-                    }
-                    val newPlans = statementProxy.targetCon.executionPlans(it.sql)
-                        ?: newStatements
-                            .map {  stmt ->
-                                MutationPlan(stmt)
-                            }
-                    hasDdl = hasDdl || newPlans.any { plan ->
-                        plan is MutationPlan && plan.statement is DdlStatement
-                    }
-                    newPlans.map { plan ->
-                        Execution(plan, it.parameters)
-                    }
+        if (batches.isEmpty()) {
+            intArrayOf()
+        } else {
+            var hasDdl = false
+            this.statementProxy = statementProxy
+            var batchIndex = 0
+            executions = batches.flatMap {
+                val newStatements = parseSqlStatements(it.sql)
+                if (hasDdl && newStatements.any { stmt -> stmt is AbstractDMLMutationStatement }) {
+                    illegalSql(it.sql, "Cannot mix DDL and DML mutation in one statement batch")
                 }
-                index = 0
-                val updateCounts = mutableListOf<Int>()
-                while (true) {
-                    val updatedCount = getUpdateCount()
-                    if (updatedCount == -1) {
-                        break
-                    }
-                    updateCounts += updatedCount
-                    getMoreResults()
+                val newPlans = statementProxy.targetCon.executionPlans(it.sql)
+                    ?: newStatements
+                        .map {  stmt ->
+                            MutationPlan(stmt)
+                        }
+                hasDdl = hasDdl || newPlans.any { plan ->
+                    plan is MutationPlan && plan.statement is DdlStatement
                 }
-                updateCounts.toIntArray()
+                newPlans.map { plan ->
+                    Execution(
+                        batchIndex = batchIndex,
+                        plan = plan,
+                        parameters = it.parameters
+                    )
+                }.also {
+                    batchIndex++
+                }
             }
+            index = 0
+            val updateCounts = mutableListOf<Int>()
+            while (true) {
+                val updateCount = getUpdateCount()
+                if (updateCount == -1) {
+                    break
+                }
+                val batchIndex = executions!![index].batchIndex
+                if (batchIndex < updateCounts.size) {
+                    updateCounts[batchIndex] += updateCount
+                } else {
+                    updateCounts.add(batchIndex, updateCount)
+                }
+                getMoreResults()
+            }
+            updateCounts.toIntArray()
         }
 
     fun getMoreResults(): Boolean {
@@ -243,6 +249,7 @@ internal class ExecutionContext(
     }
 
     private data class Execution(
+        val batchIndex: Int,
         val plan: ExecutionPlan<*>,
         val parameters: Parameters?
     )

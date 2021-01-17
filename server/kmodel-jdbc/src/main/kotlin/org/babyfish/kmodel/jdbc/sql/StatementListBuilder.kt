@@ -11,6 +11,8 @@ class StatementListBuilder(
 
     private val statements = mutableListOf<Statement>()
 
+    private var baseParamOffset = 1
+
     fun append(token: Token) {
         if (token.type == SqlLexer.EOF || token.text == ";") {
             submit()
@@ -19,7 +21,7 @@ class StatementListBuilder(
                     token.type != SqlLexer.COMMENT &&
                     statementBuilder === null
             ) {
-                statementBuilder = statementBuilder(token)
+                statementBuilder = statementBuilder(token, baseParamOffset)
             }
             statementBuilder?.append(token)
         }
@@ -33,16 +35,20 @@ class StatementListBuilder(
     private fun submit() {
         statementBuilder?.build()?.also {
             statements += it
+            baseParamOffset = it.paramOffsetMap.lastEntry().value
         }
         statementBuilder = null
     }
 
-    private fun statementBuilder(firstToken: Token): StatementBuilder<*> =
-            when (firstToken.text.toLowerCase()) {
-                "insert" -> InsertStatementBuilder(sql)
-                "update" -> UpdateStatementBuilder(sql)
-                "delete" -> DeleteStatementBuilder(sql)
-                "select" -> SelectStatementBuilder()
-                else -> DdlStatementBuilder()
-            }
+    private fun statementBuilder(
+        firstToken: Token,
+        baseParamOffset: Int
+    ): StatementBuilder<*> =
+        when (firstToken.text.toLowerCase()) {
+            "insert" -> InsertStatementBuilder(baseParamOffset, sql)
+            "update" -> UpdateStatementBuilder(baseParamOffset, sql)
+            "delete" -> DeleteStatementBuilder(baseParamOffset, sql)
+            "select" -> SelectStatementBuilder(baseParamOffset)
+            else -> DdlStatementBuilder(baseParamOffset)
+        }
 }

@@ -6,4 +6,4 @@ import java.util.*
 class SelectStatement(
     tokens: List<Token>,
     paramOffsetMap: NavigableMap<Int, Int>
-    ): Statement(tokens, paramOffsetMap)
+): Statement(tokens, paramOffsetMap)

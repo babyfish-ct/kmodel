@@ -2,7 +2,12 @@ package org.babyfish.kmodel.jdbc.sql
 
 import org.antlr.v4.runtime.Token
 
-internal class SelectStatementBuilder : StatementBuilder<ChannelType>(false) {
+internal class SelectStatementBuilder(
+    baseParamOffset: Int
+) : StatementBuilder<ChannelType>(
+    baseParamOffset,
+    false
+) {
 
     override fun accept(token: Token, index: Int) {}
 

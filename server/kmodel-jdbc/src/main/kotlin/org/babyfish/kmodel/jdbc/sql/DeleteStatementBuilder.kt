@@ -7,8 +7,12 @@ import java.lang.StringBuilder
 import java.sql.SQLException
 
 internal class DeleteStatementBuilder(
-        private val fullSql: String
-) : StatementBuilder<DeleteStatementBuilder.Channel>(true) {
+    baseParamOffset: Int,
+    private val fullSql: String
+) : StatementBuilder<DeleteStatementBuilder.Channel>(
+    baseParamOffset,
+    true
+) {
 
     private var fromIndex = -1
 

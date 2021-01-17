@@ -109,6 +109,58 @@ class InsertTest : AbstractExecTest() {
     }
 
     @Test
+    fun testBatchByPreparedStatement() {
+        executeUpdate {
+            expect(listOf(1, 1)) {
+                prepareStatement("""
+                        insert into product 
+                        values (?, ?, ?, ?)"""
+                )
+                    .apply {
+                        setShort(1, 5)
+                        setString(2, "Tea")
+                        setLong(3, 25)
+                        setByte(4, 1)
+                        addBatch()
+                        setInt(1, 6)
+                        setNString(2, "Brush")
+                        setFloat(3, 10F)
+                        setFloat(4, 2F)
+                        addBatch()
+                    }
+                    .executeBatch()
+                    .asList()
+            }
+        }.expectMultipleRows()
+    }
+
+    @Test
+    fun testInsertOnConflictKeyByStatement() {
+        executeUpdate {
+            expect(4) {
+                createStatement()
+                    .executeUpdate("""
+                    insert into product(
+                        price,
+                        category_id,
+                        id,
+                        name
+                    )
+                    values
+                    (100, null, 3, 'new_Pen'),
+                    (100, null, 4, 'new_Pencil'),
+                    (25, 1, 5, 'Tea'),
+                    (10, 2, 6, 'Brush')
+                    on duplicated key 
+                    update set
+                    price = price + values(price),
+                    name = excluded.name"""
+                    )
+            }
+        }.expectUpsertedMultipleRows()
+    }
+
+    @Test
     fun testBatchOnConflictKeyByStatement() {
         executeUpdate {
             expect(listOf(2, 2)) {
@@ -193,33 +245,58 @@ class InsertTest : AbstractExecTest() {
     }
 
     @Test
-    fun testInsertOnConflictKeyByStatement() {
+    fun testBatchInsertOnConflictKeyByPreparedStatement() {
         executeUpdate {
-            expect(4) {
-                createStatement()
-                    .executeUpdate("""
+            expect(listOf(2, 2)) {
+                prepareStatement("""
                     insert into product(
                         price,
                         category_id,
                         id,
                         name
                     )
-                    values
-                    (100, null, 3, 'new_Pen'),
-                    (100, null, 4, 'new_Pencil'),
-                    (25, 1, 5, 'Tea'),
-                    (10, 2, 6, 'Brush')
-                    on duplicated key 
-                    update set
-                    price = price + values(price),
-                    name = excluded.name"""
+                    values (?, ?, ?, ?)
+                    on conflict(id) do update set
+                    price = price + excluded.price,
+                    name = values(name);
+                    insert into product(
+                        price,
+                        category_id,
+                        id,
+                        name
                     )
+                    values (?, ?, ?, ?)
+                    on conflict(id) do update set
+                    price = price + excluded.price,
+                    name = values(name);"""
+                ).apply {
+                    setFloat(1, 100F)
+                    setNull(2, Types.BIGINT)
+                    setDouble(3, 3.0)
+                    setString(4, "new_Pen")
+                    setByte(5, 100)
+                    setNull(6, Types.INTEGER)
+                    setShort(7, 4)
+                    setNString(8, "new_Pencil")
+                    addBatch()
+                    setDouble(1, 25.0)
+                    setByte(2, 1)
+                    setInt(3, 5)
+                    setString(4, "Tea")
+                    setShort(5, 10)
+                    setDouble(6, 2.0)
+                    setShort(7, 6)
+                    setNString(8, "Brush")
+                    addBatch()
+                }
+                .executeBatch()
+                .asList()
             }
         }.expectUpsertedMultipleRows()
     }
 
     @Test
-    fun testOnConflictDoNothing() {
+    fun testOnConflictDoNothingByStatement() {
         executeUpdate {
             expect(1) {
                 createStatement()
@@ -234,7 +311,7 @@ class InsertTest : AbstractExecTest() {
     }
 
     @Test
-    fun testBatchOnConflictDoNothing() {
+    fun testBatchOnConflictDoNothingByStatement() {
         executeUpdate {
             expect(listOf(1, 0)) {
                 createStatement()
@@ -253,6 +330,33 @@ class InsertTest : AbstractExecTest() {
                         )
                     }
                     .executeBatch()
+                    .asList()
+            }
+        }.expectSingleRow()
+    }
+
+    @Test
+    fun testBatchOnConflictDoNothingByPreparedStatement() {
+        executeUpdate {
+            expect(listOf(1, 0)) {
+                prepareStatement("""
+                    insert into product(name, id, category_id, price)
+                    values(?, ?, ?, ?)
+                    on conflict do nothing"""
+                )
+                .apply {
+                    setString(1, "Tea")
+                    setBigDecimal(2, BigDecimal("5"))
+                    setDouble(3, 1.0)
+                    setByte(4, 25)
+                    addBatch()
+                    setNString(1, "X")
+                    setBigDecimal(2, BigDecimal.ONE)
+                    setFloat(3, 9999F)
+                    setShort(4, 9999)
+                    addBatch()
+                }
+                .executeBatch()
                     .asList()
             }
         }.expectSingleRow()
