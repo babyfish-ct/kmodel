@@ -78,7 +78,7 @@ internal class InsertStatementBuilder(
         if (rows.isEmpty()) {
             illegalSql(fullSql,"No inserted rows is specified by 'values', inserted by sub query is not supported")
         }
-        val tableSourceRange = tokenRange(tableFromIndex, tableToIndex + 1)
+        val tableClauseRange = tokenRange(tableFromIndex, tableToIndex + 1)
         val updatedActions = updatedActionListBuilder?.build() ?: emptyList()
         val conflictPolicy =
             if (channel!! >= Channel.CONFLICT) {
@@ -94,7 +94,7 @@ internal class InsertStatementBuilder(
             fullSql = fullSql,
             tokens = tokens,
             paramOffsetMap = paramOffsetMap,
-            tableSourceRange = tableSourceRange,
+            tableClauseRange = tableClauseRange,
             insertedColumnRanges = insertedColumnRanges,
             rows = rows,
             conflictPolicy = conflictPolicy

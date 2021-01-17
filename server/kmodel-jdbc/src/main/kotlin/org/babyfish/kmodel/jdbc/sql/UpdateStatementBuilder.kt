@@ -39,15 +39,15 @@ internal class UpdateStatementBuilder(
     }
 
     override fun create(): Statement {
-        val tableSourceRange = tokenRange(1, setIndex)
+        val tableClauseRange = tokenRange(1, setIndex)
         return UpdateStatement(
             fullSql = fullSql,
             tokens = tokens,
             paramOffsetMap = paramOffsetMap,
-            tableSourceRange = tableSourceRange,
+            tableClauseRange = tableClauseRange,
             tableAlias = tableAlias(
-                tableSourceRange.fromIndex,
-                tableSourceRange.toIndex
+                tableClauseRange.fromIndex,
+                tableClauseRange.toIndex
             ),
             updatedActions = updatedActionListBuilder?.build() ?: emptyList(),
             conditionRange = if (whereIndex == -1) {

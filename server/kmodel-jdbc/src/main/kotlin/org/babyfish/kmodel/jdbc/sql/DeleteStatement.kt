@@ -7,21 +7,23 @@ class DeleteStatement(
     fullSql: String,
     tokens: List<Token>,
     paramOffsetMap: NavigableMap<Int, Int>,
-    tableSourceRange: TokenRange,
+    tableClauseRange: TokenRange,
+    tableRange: TokenRange,
     tableAlias: String?,
     val conditionalRange: TokenRange?
 ): AbstractDMLMutationStatement(
     fullSql,
     tokens,
     paramOffsetMap,
-    tableSourceRange,
+    tableClauseRange,
+    tableRange,
     tableAlias
 ) {
 
     private val strVal: String by lazy {
         """{
             |sql = ${tokens.joinToString("") { it.text }},
-            |tableSourceRange = $tableSourceRange,
+            |tableClauseRange = $tableClauseRange,
             |conditionalRange = $conditionalRange
             |}""".trimMargin()
     }

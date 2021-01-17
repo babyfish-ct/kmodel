@@ -7,7 +7,7 @@ class UpdateStatement(
     fullSql: String,
     tokens: List<Token>,
     paramOffsetMap: NavigableMap<Int, Int>,
-    tableSourceRange: TokenRange,
+    tableClauseRange: TokenRange,
     tableAlias: String?,
     val updatedActions: List<UpdatedAction>,
     val conditionRange: TokenRange?
@@ -15,14 +15,15 @@ class UpdateStatement(
     fullSql,
     tokens,
     paramOffsetMap,
-    tableSourceRange,
+    tableClauseRange,
+    tableClauseRange,
     tableAlias
 ) {
 
     private val strVal: String by lazy {
         """{
             |sql = ${tokens.joinToString("") { it.text }},
-            |tableSourceRange = $tableSourceRange,
+            |tableClauseRange = $tableClauseRange,
             |updatedActions = $updatedActions,
             |conditionRange = $conditionRange
             |}""".trimMargin()

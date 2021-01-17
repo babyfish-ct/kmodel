@@ -7,7 +7,7 @@ class InsertStatement(
     fullSql: String,
     tokens: List<Token>,
     paramOffsetMap: NavigableMap<Int, Int>,
-    tableSourceRange: TokenRange,
+    tableClauseRange: TokenRange,
     val insertedColumnRanges: List<TokenRange>,
     val rows: List<Row>,
     val conflictPolicy: ConflictPolicy?
@@ -15,14 +15,15 @@ class InsertStatement(
     fullSql,
     tokens,
     paramOffsetMap,
-    tableSourceRange,
+    tableClauseRange,
+    tableClauseRange,
     null
 ) {
 
     private val strVal: String by lazy {
         """{
             |sql = ${tokens.joinToString("") { it.text }},
-            |tableSourceRange = $tableSourceRange,
+            |tableClauseRange = $tableClauseRange,
             |insertedColumns = $insertedColumnRanges,
             |rows = $rows
             |conflictPolicy = $conflictPolicy

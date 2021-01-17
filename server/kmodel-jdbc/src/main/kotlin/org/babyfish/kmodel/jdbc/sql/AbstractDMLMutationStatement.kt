@@ -5,17 +5,18 @@ import org.babyfish.kmodel.jdbc.SqlLexer
 import java.util.*
 
 abstract class AbstractDMLMutationStatement(
-        val fullSql: String,
-        tokens: List<Token>,
-        paramOffsetMap: NavigableMap<Int, Int>,
-        val tableSourceRange: TokenRange,
-        val tableAlias: String?
+    val fullSql: String,
+    tokens: List<Token>,
+    paramOffsetMap: NavigableMap<Int, Int>,
+    val tableClauseRange: TokenRange,
+    val tableRange: TokenRange,
+    val primaryTableAlias: String?
 ) : Statement(tokens, paramOffsetMap) {
 
     val primaryTable: String by lazy {
         val builder = StringBuilder()
         var prevToken: Token? = null
-        loop@ for (index in tableSourceRange.fromIndex until tableSourceRange.toIndex) {
+        loop@ for (index in tableClauseRange.fromIndex until tableClauseRange.toIndex) {
             val token = tokens[index]
             when (token.type) {
                 SqlLexer.IDENTIFIER -> {

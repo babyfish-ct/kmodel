@@ -1,7 +1,7 @@
 package org.babyfish.kmodel.jdbc.exec
 
 import org.babyfish.kmodel.jdbc.DataChangedEvent
-import org.babyfish.kmodel.test.asNonNull
+import org.babyfish.kmodel.test.toNonNull
 import org.babyfish.kmodel.test.expectObj
 import org.babyfish.kmodel.test.map
 import org.babyfish.kmodel.test.obj
@@ -9,7 +9,6 @@ import org.junit.Test
 import java.math.BigDecimal
 import java.sql.Types
 import kotlin.test.expect
-import kotlin.test.fail
 
 class InsertTest : AbstractExecTest() {
 
@@ -442,7 +441,7 @@ class InsertTest : AbstractExecTest() {
                 map(PRODUCT_QUALIFIED_NAME) {
                     size(4)
                     obj(listOf(3L)) {
-                        asNonNull {
+                        toNonNull {
                             list(Row::pkValues) {
                                 size(1)
                                 value(0) eq 3L
@@ -456,7 +455,7 @@ class InsertTest : AbstractExecTest() {
                         }
                     }
                     obj(listOf(4L)) {
-                        asNonNull {
+                        toNonNull {
                             list(Row::pkValues) {
                                 size(1)
                                 value(0) eq 4L

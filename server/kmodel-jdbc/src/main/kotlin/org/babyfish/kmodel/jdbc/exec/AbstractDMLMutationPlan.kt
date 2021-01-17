@@ -4,9 +4,7 @@ import org.babyfish.kmodel.jdbc.metadata.Column
 import org.babyfish.kmodel.jdbc.metadata.Table
 import org.babyfish.kmodel.jdbc.metadata.tableManager
 import org.babyfish.kmodel.jdbc.sql.AbstractDMLMutationStatement
-import java.lang.IllegalArgumentException
 import java.sql.Connection
-import java.sql.PreparedStatement
 
 abstract class AbstractDMLMutationPlan<S: AbstractDMLMutationStatement>(
     con: Connection,
@@ -21,10 +19,17 @@ abstract class AbstractDMLMutationPlan<S: AbstractDMLMutationStatement>(
     }
 
     protected val imageQuery: ExtraStatement by lazy {
+        val prefix = statement
+            .primaryTableAlias
+            ?.let { "$it." }
+            ?: ""
+        val selectedColumns = columns.joinToString {
+            "$prefix${it.name}"
+        }
         ExtraStatementBuilder().apply {
-            append("select ${columns.joinToString(", ") {it.name}} from ")
+            append("select $selectedColumns from ")
             append(
-                statement.tableSourceRange,
+                statement.tableClauseRange,
                 statement
             )
             determineImageQueryCondition()
@@ -41,7 +46,7 @@ abstract class AbstractDMLMutationPlan<S: AbstractDMLMutationStatement>(
     ) {
         addConditionByPkValues(
             table,
-            statement.tableAlias,
+            statement.primaryTableAlias,
             beforeRows
         ) { row, _, pkColumn ->
             row[pkColumn.name]!!

@@ -32,7 +32,7 @@ class InsertPlan(
     private val insertStatementBuilderTemplate =
         ExtraStatementBuilder().apply {
             append("insert into ")
-            append(statement.tableSourceRange, statement)
+            append(statement.tableClauseRange, statement)
             append("(", statement.insertedColumnRanges.isNotEmpty())
             append(statement.insertedColumnRanges, statement)
             append(")", statement.insertedColumnRanges.isNotEmpty())

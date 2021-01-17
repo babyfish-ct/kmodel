@@ -1,6 +1,5 @@
 package org.babyfish.kmodel.jdbc.exec
 
-import org.babyfish.kmodel.jdbc.PreparedStatementProxy
 import org.babyfish.kmodel.jdbc.StatementProxy
 import org.babyfish.kmodel.jdbc.metadata.Column
 import org.babyfish.kmodel.jdbc.sql.DeleteStatement
@@ -17,7 +16,7 @@ class DeletePlan(
     private val mutationStatementBuilderTemplate =
         ExtraStatementBuilder().apply {
             append("delete from ")
-            append(statement.tableSourceRange, statement)
+            append(statement.tableRange, statement)
             append(" where ")
             freeze()
         }

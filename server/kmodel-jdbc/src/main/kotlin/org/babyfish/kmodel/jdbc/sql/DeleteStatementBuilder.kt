@@ -2,9 +2,6 @@ package org.babyfish.kmodel.jdbc.sql
 
 import org.antlr.v4.runtime.Token
 import org.babyfish.kmodel.jdbc.SqlLexer
-import org.babyfish.kmodel.jdbc.metadata.standardIdentifier
-import java.lang.StringBuilder
-import java.sql.SQLException
 
 internal class DeleteStatementBuilder(
     baseParamOffset: Int,
@@ -18,22 +15,65 @@ internal class DeleteStatementBuilder(
 
     private var whereIndex = -1
 
-    override fun accept(token: Token, index: Int) {
+    private var firstCommaIndex = -1
 
+    private var firstJoinIndex = -1
+
+    override fun accept(token: Token, index: Int) {
+        if (depth == 0) {
+            if (firstCommaIndex == -1 && token.text == "," ) {
+                firstCommaIndex = index
+            }
+            if (firstJoinIndex == -1 && token.text.equals("join", true)) {
+                var joinIndex = index
+                preSearchLoop@for (i in index - 2 downTo 3) {
+                    if (tokens[i].type == SqlLexer.WS ||
+                            tokens[i].type == SqlLexer.COMMENT) {
+                        continue
+                    }
+                    when {
+                        tokens[i].text.equals("inner", true) ->
+                            joinIndex = i
+                        tokens[i].text.equals("left", true) ->
+                            joinIndex = i
+                        tokens[i].text.equals("right", true) ->
+                            joinIndex = i
+                        tokens[i].text.equals("full", true) ->
+                            joinIndex = i
+                        tokens[i].text.equals("outer", true) ->
+                            joinIndex = i
+                        tokens[i].text.equals("full", true) ->
+                            joinIndex = i
+                        else -> break@preSearchLoop
+                    }
+                }
+                firstJoinIndex = joinIndex
+            }
+        }
     }
 
     override fun create(): Statement {
-        val endFromIndex = if (whereIndex != -1) {
-            whereIndex
-        } else {
-            tokens.size
-        }
+        val tableEndIndex = positiveIndex(whereIndex)
+        val primaryTableEndIndex =
+            intArrayOf(
+                tableEndIndex,
+                positiveIndex(firstCommaIndex),
+                positiveIndex(firstJoinIndex)
+            ).min()!!
+        val tableClauseRange = tokenRange(fromIndex + 1, tableEndIndex)
+        val tableRange = tokenRange(fromIndex + 1, primaryTableEndIndex)
+        val tableAlias =
+            tableAlias(
+                tableClauseRange.fromIndex,
+                primaryTableEndIndex
+            )
         return DeleteStatement(
             fullSql = fullSql,
             tokens = tokens,
             paramOffsetMap = paramOffsetMap,
-            tableSourceRange = tokenRange(fromIndex + 1, endFromIndex),
-            tableAlias = null,
+            tableClauseRange = tableClauseRange,
+            tableRange = tableRange,
+            tableAlias = tableAlias,
             conditionalRange = if (whereIndex == -1) {
                 null
             } else {
@@ -64,4 +104,11 @@ internal class DeleteStatementBuilder(
 
         override val keywords = listOf(keyword)
     }
+
+    private inline fun positiveIndex(index: Int): Int =
+        if (index == -1) {
+            tokens.size
+        } else {
+            index
+        }
 }

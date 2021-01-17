@@ -1,6 +1,5 @@
 package org.babyfish.kmodel.jdbc.sql
 
-import jdk.nashorn.internal.parser.Token
 import org.babyfish.kmodel.test.expectObj
 import org.babyfish.kmodel.test.obj
 import org.junit.Test
@@ -15,7 +14,7 @@ class InsertStatementTest {
                 "INSERT INTO PRODUCT VALUES(1, 'Pen', 3.0)"
         )
         expectObj(stmt) {
-            obj(InsertStatement::tableSourceRange) {
+            obj(InsertStatement::tableClauseRange) {
                 rangeEq("PRODUCT", 1, 0, stmt)
             }
             list(InsertStatement::insertedColumnRanges) {
@@ -49,7 +48,7 @@ class InsertStatementTest {
                         "VALUES(1, 'Pen', 3.0), (2, 'Pencil', 1.0), (?, ?, ?)"
         )
         expectObj(stmt) {
-            obj(InsertStatement::tableSourceRange) {
+            obj(InsertStatement::tableClauseRange) {
                 rangeEq("PRODUCT", 1, 0, stmt)
             }
             list(InsertStatement::insertedColumnRanges) {
@@ -120,7 +119,7 @@ class InsertStatementTest {
                         "ON CONFLICT(ID) DO NOTHING"
         )
         stmt.expectTokenRange("PRODUCT", 1, 0) {
-            stmt.tableSourceRange
+            stmt.tableClauseRange
         }
         assertTrue {
             stmt.insertedColumnRanges.isEmpty()
@@ -157,7 +156,7 @@ class InsertStatementTest {
                         "PRICE = EXCLUDED.PRICE"
         )
         stmt.expectTokenRange("PRODUCT", 1, 0) {
-            stmt.tableSourceRange
+            stmt.tableClauseRange
         }
         expect("ID, \"NAME\", [PRICE]") {
             stmt.insertedColumnRanges.joinToString {
@@ -220,7 +219,7 @@ class InsertStatementTest {
                         "NAME = EXCLUDED.NAME, PRICE = EXCLUDED.PRICE"
         )
         stmt.expectTokenRange("PRODUCT", 1, 0) {
-            stmt.tableSourceRange
+            stmt.tableClauseRange
         }
         expect("ID, \"NAME\", [PRICE]") {
             stmt.insertedColumnRanges.joinToString {
@@ -291,7 +290,7 @@ class InsertStatementTest {
                         "NAME = EXCLUDED.NAME, PRICE = EXCLUDED.PRICE"
         )
         stmt.expectTokenRange("PRODUCT", 1, 0) {
-            stmt.tableSourceRange
+            stmt.tableClauseRange
         }
         expect("ID, \"NAME\", [PRICE]") {
             stmt.insertedColumnRanges.joinToString {

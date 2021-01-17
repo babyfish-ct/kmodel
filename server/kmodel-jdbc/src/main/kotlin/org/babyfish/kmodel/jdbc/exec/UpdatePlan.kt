@@ -1,6 +1,5 @@
 package org.babyfish.kmodel.jdbc.exec
 
-import org.babyfish.kmodel.jdbc.PreparedStatementProxy
 import org.babyfish.kmodel.jdbc.StatementProxy
 import org.babyfish.kmodel.jdbc.metadata.Column
 import org.babyfish.kmodel.jdbc.sql.UpdateStatement
@@ -17,7 +16,7 @@ class UpdatePlan(
     private val mutationStatementBuilderTemplate =
         ExtraStatementBuilder().apply {
             append("update ")
-            append(statement.tableSourceRange, statement)
+            append(statement.tableClauseRange, statement)
             append(" set ")
             var addComma = false
             for (updatedAction in statement.updatedActions) {

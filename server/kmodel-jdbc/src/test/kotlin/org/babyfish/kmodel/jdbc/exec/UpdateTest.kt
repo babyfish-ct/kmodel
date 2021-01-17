@@ -2,7 +2,7 @@ package org.babyfish.kmodel.jdbc.exec
 
 import org.babyfish.kmodel.jdbc.DataChangedEvent
 import org.babyfish.kmodel.jdbc.metadata.QualifiedName
-import org.babyfish.kmodel.test.asNonNull
+import org.babyfish.kmodel.test.toNonNull
 import org.babyfish.kmodel.test.expectObj
 import org.babyfish.kmodel.test.map
 import org.babyfish.kmodel.test.obj
@@ -103,7 +103,7 @@ class UpdateTest: AbstractExecTest() {
                 ) {
                     size(2)
                     obj(listOf(1L)) {
-                        asNonNull {
+                        toNonNull {
                             list(Row::pkValues) {
                                 size(1)
                                 value(0) eq 1L
@@ -115,7 +115,7 @@ class UpdateTest: AbstractExecTest() {
                         }
                     }
                     obj(listOf(2L)) {
-                        asNonNull {
+                        toNonNull {
                             list(Row::pkValues) {
                                 size(1)
                                 value(0) eq 2L

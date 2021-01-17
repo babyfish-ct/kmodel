@@ -1,7 +1,6 @@
 package org.babyfish.kmodel.jdbc.sql
 
 import org.junit.Test
-import kotlin.test.assertNull
 import kotlin.test.expect
 import kotlin.test.fail
 
@@ -22,7 +21,7 @@ class UpdateStatementTest {
                 1,
                 0
         ) {
-            stmt.tableSourceRange
+            stmt.tableClauseRange
         }
         expect(1) {
             stmt.updatedActions.size
