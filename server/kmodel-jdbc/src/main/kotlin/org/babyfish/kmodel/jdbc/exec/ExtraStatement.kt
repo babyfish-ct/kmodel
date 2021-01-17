@@ -1,6 +1,7 @@
 package org.babyfish.kmodel.jdbc.exec
 
 import org.babyfish.kmodel.jdbc.sql.TokenRange
+import org.slf4j.LoggerFactory
 import java.sql.Connection
 import java.sql.PreparedStatement
 
@@ -8,14 +9,13 @@ class ExtraStatement internal constructor(
     private val sql: String,
     private val paramSequences: List<ParamSequence>
 ) {
-
     fun executeQuery(
         targetConnection: Connection,
         parameterSetters: List<(PreparedStatement.(Int) -> Unit)?>?,
         mapper: ((columnIndex: Int) -> Any?) -> Row
-    ): MutableMap<List<Any>, Row> =
-        if (parameterSetters !== null) {
-            println(sql)
+    ): MutableMap<List<Any>, Row> {
+        LOGGER.info("Extra SQL: $sql")
+        return if (paramSequences.isNotEmpty()) {
             targetConnection
                 .prepareStatement(sql)
                 .using {
@@ -47,13 +47,14 @@ class ExtraStatement internal constructor(
                 }
             }
         }
+    }
 
     fun executeUpdate(
         targetConnection: Connection,
         parameterSetters: List<(PreparedStatement.(Int) -> Unit)?>?
-    ): Int =
-        if (parameterSetters !== null) {
-            println(sql)
+    ): Int {
+        LOGGER.info("Extra SQL: $sql")
+        return if (paramSequences.isNotEmpty()) {
             targetConnection
                 .prepareStatement(sql)
                 .using {
@@ -73,22 +74,6 @@ class ExtraStatement internal constructor(
                 .createStatement()
                 .executeUpdate(sql)
         }
-
-    private fun applyParameters(
-        targetStatement: PreparedStatement,
-        tokenRange: TokenRange,
-        baseParamIndex: Int,
-        parameterSetters: List<(PreparedStatement.(Int) -> Unit)?>
-    ): Int {
-        var base = baseParamIndex
-        var from = tokenRange.paramOffset
-        var to = from + tokenRange.paramCount
-        for (paramIndex in from until to) {
-            parameterSetters[paramIndex]?.let {
-                targetStatement.it(base++)
-            }
-        }
-        return base
     }
 }
 
@@ -97,7 +82,9 @@ internal interface ParamSequence {
     fun applyTo(
         baseParamIndex: Int,
         targetStatement: PreparedStatement,
-        originalParameterSetters: List<(PreparedStatement.(Int) -> Unit)?>,
+        originalParameterSetters: List<(PreparedStatement.(Int) -> Unit)?>?,
         extraValues: List<Any?>
     ): Int
 }
+
+private val LOGGER = LoggerFactory.getLogger(ExtraStatement::class.java)

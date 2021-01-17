@@ -4,6 +4,7 @@ import org.babyfish.kmodel.jdbc.metadata.Column
 import org.babyfish.kmodel.jdbc.metadata.Table
 import org.babyfish.kmodel.jdbc.sql.Statement
 import org.babyfish.kmodel.jdbc.sql.TokenRange
+import java.lang.IllegalArgumentException
 import java.lang.IllegalStateException
 import java.lang.StringBuilder
 import java.sql.PreparedStatement
@@ -20,8 +21,12 @@ internal class ExtraStatementBuilder(
         builder.append(sqlPart)
     }
 
-    fun append(column: Column) {
+    fun append(column: Column, tableAlias: String? = null) {
         validate()
+        if (tableAlias !== null) {
+            builder.append(tableAlias)
+            builder.append('.')
+        }
         builder.append(column.name)
     }
 
@@ -111,14 +116,14 @@ internal class ExtraStatementBuilder(
         override fun applyTo(
             baseParamIndex: Int,
             targetStatement: PreparedStatement,
-            originalParameterSetters: List<(PreparedStatement.(Int) -> Unit)?>,
+            originalParameterSetters: List<(PreparedStatement.(Int) -> Unit)?>?,
             extraValues: List<Any?>
         ): Int {
             var base = baseParamIndex
             var from = tokenRange.paramOffset
             var to = from + tokenRange.paramCount
             for (paramIndex in from until to) {
-                originalParameterSetters[paramIndex]?.let {
+                originalParameterSetters?.get(paramIndex)?.let {
                     targetStatement.it(base++)
                 }
             }
@@ -134,7 +139,7 @@ internal class ExtraStatementBuilder(
         override fun applyTo(
             baseParamIndex: Int,
             targetStatement: PreparedStatement,
-            originalParameterSetters: List<(PreparedStatement.(Int) -> Unit)?>,
+            originalParameterSetters: List<(PreparedStatement.(Int) -> Unit)?>?,
             extraValues: List<Any?>
         ): Int {
             if (value == null) {

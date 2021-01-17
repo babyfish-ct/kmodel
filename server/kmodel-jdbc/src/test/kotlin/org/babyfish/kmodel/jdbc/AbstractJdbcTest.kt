@@ -22,14 +22,10 @@ abstract class AbstractJdbcTest {
         action: Connection.() -> Unit
     ): DataChangedEvent {
         connection.autoCommit = false
-        val result = try {
-            dataChangedEvent = null
+        dataChangedEvent = null
+        transaction {
             connection.action()
-        } catch (ex: Throwable) {
-            connection.rollback()
-            throw ex
         }
-        connection.commit()
         return dataChangedEvent ?: fail("No data changed event")
     }
 
@@ -51,14 +47,9 @@ abstract class AbstractJdbcTest {
             dataChangedEvent = it
         }
         _con = con
-        con.autoCommit = false
-        try {
+        transaction {
             setupDatabase()
-        } catch (ex: Throwable) {
-            con.rollback()
-            throw ex
         }
-        con.commit()
     }
 
     @After

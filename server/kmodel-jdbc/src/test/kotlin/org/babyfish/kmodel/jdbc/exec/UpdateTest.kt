@@ -1,55 +1,167 @@
 package org.babyfish.kmodel.jdbc.exec
 
-import org.babyfish.kmodel.jdbc.AbstractJdbcTest
-import org.babyfish.kmodel.jdbc.ConnectionProxy
-import org.babyfish.kmodel.jdbc.metadata.TableManager
-import org.babyfish.kmodel.jdbc.metadata.tableManager
-import org.junit.After
-import org.junit.Before
-import org.junit.BeforeClass
+import org.babyfish.kmodel.jdbc.DataChangedEvent
+import org.babyfish.kmodel.jdbc.metadata.QualifiedName
+import org.babyfish.kmodel.test.asNonNull
+import org.babyfish.kmodel.test.expectObj
+import org.babyfish.kmodel.test.map
+import org.babyfish.kmodel.test.obj
 import org.junit.Test
 import java.math.BigDecimal
-import java.sql.Connection
-import java.sql.DriverManager
-import java.sql.PreparedStatement
 import kotlin.test.expect
 
 class UpdateTest: AbstractExecTest() {
 
     @Test
-    fun test() {
-        transaction {
-            val con = connection!!
-            val updateCount = con
-                .prepareStatement(
-                    """update product p
-                            |set p.price = p.price + ?
-                            |where p.id = ?""".trimMargin()
-                )
-                .using {
-                    it.setBigDecimal(1, BigDecimal.ONE)
-                    it.setLong(2, 1)
-                    it.executeUpdate()
-                }
-            expect(1) {
-                updateCount
+    fun testUpdateByStatement() {
+        executeUpdate {
+            expect(2) {
+                connection
+                    .createStatement()
+                    .executeUpdate(
+                        """update product as p
+                            |set p.price = p.price + 1 
+                            |where p.category_id = 1""".trimMargin()
+                    )
             }
-            con.prepareStatement(
-                "insert into product(name, price, category_id, id) " +
-                        "values(?, ?, ?, ?), (?, ?, ?, ?) " +
-                        "on duplicate key " +
-                        "update price = values(price) + 3"
-            ).using {
-                it.setString(1, "XBox")
-                it.setBigDecimal(2, BigDecimal.TEN)
-                it.setLong(3, 1)
-                it.setLong(4, 1)
-                it.setString(5, "PS2")
-                it.setBigDecimal(6, BigDecimal.TEN)
-                it.setLong(7, 1)
-                it.setLong(8, 3)
-                expect(2) {
-                    it.executeUpdate()
+        }.expectUpdatedFoods()
+    }
+
+    @Test
+    fun testBatchUpdateByStatement() {
+        executeUpdate {
+            expect(listOf(1, 1)) {
+                connection
+                    .createStatement()
+                    .apply {
+                        addBatch(
+                            "update product as p " +
+                                    "set p.price = p.price + 1 where p.id = 1"
+                        )
+                        addBatch(
+                            "update product as p " +
+                                    "set p.price = p.price + 1 where p.id = 2"
+                        )
+                    }
+                    .executeBatch()
+                    .asList()
+            }
+        }.expectUpdatedFoods()
+    }
+
+    @Test
+    fun testUpdateByPreparedStatement() {
+        executeUpdate {
+            expect(2) {
+                connection
+                    .prepareStatement(
+                        """update product as p
+                            |set p.price = p.price + ? 
+                            |where p.category_id = ?""".trimMargin()
+                    ).apply {
+                        setBigDecimal(1, BigDecimal.ONE)
+                        setFloat(2, 1.0F)
+                    }
+                    .executeUpdate()
+            }
+        }.expectUpdatedFoods()
+    }
+
+    @Test
+    fun testBatchUpdateByPreparedStatement() {
+        executeUpdate {
+            expect(listOf(1, 1)) {
+                connection
+                    .prepareStatement(
+                        "update product as p " +
+                                "set p.price = p.price + ? where p.id = ?"
+                    )
+                    .apply {
+                        setBigDecimal(1, BigDecimal.ONE)
+                        setByte(2, 1)
+                        addBatch()
+                        setBigDecimal(1, BigDecimal.ONE)
+                        setByte(2, 2)
+                        addBatch()
+                    }
+                    .executeBatch()
+                    .asList()
+            }
+        }.expectUpdatedFoods()
+    }
+
+    private fun DataChangedEvent.expectUpdatedFoods() {
+        expectObj(this) {
+            map(DataChangedEvent::beforeImageMap) {
+                size(1)
+                map(
+                    QualifiedName(
+                        "UPDATE-TEST",
+                        "PUBLIC",
+                        "PRODUCT"
+                    )
+                ) {
+                    size(2)
+                    obj(listOf(1L)) {
+                        asNonNull {
+                            list(Row::pkValues) {
+                                size(1)
+                                value(0) eq 1L
+                            }
+                            map(Row::otherValueMap) {
+                                size(1)
+                                value("PRICE") eq BigDecimal("20")
+                            }
+                        }
+                    }
+                    obj(listOf(2L)) {
+                        asNonNull {
+                            list(Row::pkValues) {
+                                size(1)
+                                value(0) eq 2L
+                            }
+                            map(Row::otherValueMap) {
+                                size(1)
+                                value("PRICE") eq BigDecimal("30")
+                            }
+                        }
+                    }
+                }
+            }
+            map(DataChangedEvent::afterImageMap) {
+                size(1)
+                map(
+                    QualifiedName(
+                        "UPDATE-TEST",
+                        "PUBLIC",
+                        "PRODUCT"
+                    )
+                ) {
+                    size(2)
+                    obj(listOf(1L)) {
+                        list(Row::pkValues) {
+                            size(1)
+                            value(0) eq 1L
+                        }
+                        map(Row::otherValueMap) {
+                            size(3)
+                            value("NAME") eq "Polk"
+                            value("PRICE") eq BigDecimal("21")
+                            value("CATEGORY_ID") eq 1L
+                        }
+                    }
+                    obj(listOf(2L)) {
+                        list(Row::pkValues) {
+                            size(1)
+                            value(0) eq 2L
+                        }
+                        map(Row::otherValueMap) {
+                            size(3)
+                            value("NAME") eq "Beef"
+                            value("PRICE") eq BigDecimal("31")
+                            value("CATEGORY_ID") eq 1L
+                        }
+                    }
                 }
             }
         }

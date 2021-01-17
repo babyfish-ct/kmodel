@@ -146,6 +146,7 @@ internal fun standardizeValue(
 
 internal fun <R> ExtraStatementBuilder.addConditionByPkValues(
     table: Table,
+    tableAlias: String?,
     rows: Collection<R>,
     pkValueGetter: (row: R, pkColumnIndex: Int, pkColumn: Column) -> Any
 ) {
@@ -158,7 +159,7 @@ internal fun <R> ExtraStatementBuilder.addConditionByPkValues(
         for (pkColumnIndex in table.primaryKeyColumns.indices) {
             val pkColumn = table.primaryKeyColumns[pkColumnIndex]
             append(" and ", addAnd)
-            append(pkColumn)
+            append(pkColumn, tableAlias)
             append(" = ")
             appendExtraParam(
                 pkValueGetter(row, pkColumnIndex, pkColumn),
@@ -169,12 +170,12 @@ internal fun <R> ExtraStatementBuilder.addConditionByPkValues(
     } else {
         var addComma = false
         if (table.primaryKeyColumns.size == 1) {
-            append(table.primaryKeyColumns[0])
+            append(table.primaryKeyColumns[0], tableAlias)
         } else {
             append("(")
             for (pkColumn in table.primaryKeyColumns) {
                 append(", ", addComma)
-                append(pkColumn)
+                append(pkColumn, tableAlias)
                 addComma = true
             }
             append(")")

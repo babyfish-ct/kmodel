@@ -8,7 +8,8 @@ abstract class AbstractDMLMutationStatement(
         val fullSql: String,
         tokens: List<Token>,
         paramOffsetMap: NavigableMap<Int, Int>,
-        val tableSourceRange: TokenRange
+        val tableSourceRange: TokenRange,
+        val tableAlias: String?
 ) : Statement(tokens, paramOffsetMap) {
 
     val primaryTable: String by lazy {

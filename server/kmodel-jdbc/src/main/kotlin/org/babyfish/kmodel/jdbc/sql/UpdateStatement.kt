@@ -8,13 +8,15 @@ class UpdateStatement(
     tokens: List<Token>,
     paramOffsetMap: NavigableMap<Int, Int>,
     tableSourceRange: TokenRange,
+    tableAlias: String?,
     val updatedActions: List<UpdatedAction>,
     val conditionRange: TokenRange?
 ) : AbstractDMLMutationStatement(
     fullSql,
     tokens,
     paramOffsetMap,
-    tableSourceRange
+    tableSourceRange,
+    tableAlias
 ) {
 
     private val strVal: String by lazy {

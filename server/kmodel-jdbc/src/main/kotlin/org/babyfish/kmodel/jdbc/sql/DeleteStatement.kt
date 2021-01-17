@@ -4,16 +4,18 @@ import org.antlr.v4.runtime.Token
 import java.util.*
 
 class DeleteStatement(
-        fullSql: String,
-        tokens: List<Token>,
-        paramOffsetMap: NavigableMap<Int, Int>,
-        tableSourceRange: TokenRange,
-        val conditionalRange: TokenRange?
+    fullSql: String,
+    tokens: List<Token>,
+    paramOffsetMap: NavigableMap<Int, Int>,
+    tableSourceRange: TokenRange,
+    tableAlias: String?,
+    val conditionalRange: TokenRange?
 ): AbstractDMLMutationStatement(
     fullSql,
     tokens,
     paramOffsetMap,
-    tableSourceRange
+    tableSourceRange,
+    tableAlias
 ) {
 
     private val strVal: String by lazy {

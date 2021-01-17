@@ -33,6 +33,7 @@ internal class DeleteStatementBuilder(
             tokens = tokens,
             paramOffsetMap = paramOffsetMap,
             tableSourceRange = tokenRange(fromIndex + 1, endFromIndex),
+            tableAlias = null,
             conditionalRange = if (whereIndex == -1) {
                 null
             } else {

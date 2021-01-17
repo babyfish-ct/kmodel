@@ -230,6 +230,7 @@ internal class ExecutionContext(
                 append(" where ")
                 addConditionByPkValues(
                     table,
+                    null,
                     beforeRowMap.keys
                 ) { row, pkColumnIndex, _ ->
                     row[pkColumnIndex]

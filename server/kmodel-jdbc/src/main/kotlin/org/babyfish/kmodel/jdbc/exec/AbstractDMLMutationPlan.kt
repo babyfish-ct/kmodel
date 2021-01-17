@@ -41,6 +41,7 @@ abstract class AbstractDMLMutationPlan<S: AbstractDMLMutationStatement>(
     ) {
         addConditionByPkValues(
             table,
+            statement.tableAlias,
             beforeRows
         ) { row, _, pkColumn ->
             row[pkColumn.name]!!

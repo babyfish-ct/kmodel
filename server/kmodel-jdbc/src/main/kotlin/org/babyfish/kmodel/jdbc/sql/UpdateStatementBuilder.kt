@@ -1,6 +1,7 @@
 package org.babyfish.kmodel.jdbc.sql
 
 import org.antlr.v4.runtime.Token
+import org.babyfish.kmodel.jdbc.SqlLexer
 
 internal class UpdateStatementBuilder(
     baseParamOffset: Int,
@@ -38,11 +39,16 @@ internal class UpdateStatementBuilder(
     }
 
     override fun create(): Statement {
+        val tableSourceRange = tokenRange(1, setIndex)
         return UpdateStatement(
             fullSql = fullSql,
             tokens = tokens,
             paramOffsetMap = paramOffsetMap,
-            tableSourceRange = tokenRange(1, setIndex),
+            tableSourceRange = tableSourceRange,
+            tableAlias = tableAlias(
+                tableSourceRange.fromIndex,
+                tableSourceRange.toIndex
+            ),
             updatedActions = updatedActionListBuilder?.build() ?: emptyList(),
             conditionRange = if (whereIndex == -1) {
                 null

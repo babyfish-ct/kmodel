@@ -99,4 +99,20 @@ internal abstract class StatementBuilder<C: ChannelType>(
             fromIndex,
             toIndex
         )
+
+    internal fun tableAlias(fromIndex: Int, toIndex: Int): String? {
+        var lastIdentifier: String? = null
+        for (index in toIndex - 1 downTo fromIndex + 1) {
+            if (tokens[index].type == SqlLexer.IDENTIFIER) {
+                if (lastIdentifier === null) {
+                    lastIdentifier = tokens[index].text
+                } else {
+                    return lastIdentifier
+                }
+            } else if (tokens[index].type != SqlLexer.WS) {
+                return null
+            }
+        }
+        return null
+    }
 }

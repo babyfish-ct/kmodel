@@ -15,7 +15,8 @@ class InsertStatement(
     fullSql,
     tokens,
     paramOffsetMap,
-    tableSourceRange
+    tableSourceRange,
+    null
 ) {
 
     private val strVal: String by lazy {
