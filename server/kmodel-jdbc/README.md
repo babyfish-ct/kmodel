@@ -1,6 +1,6 @@
 # KModel对JDBC的扩展
 
-kmodel-jdbc一个JDBC代理，此代理有两个功能
+kmodel-jdbc是一个JDBC代理，此代理有两个功能
 1. 改变SQL的行为。
 2. 监听数据库的变更。
 
@@ -56,7 +56,6 @@ kmodel-jdbc一个JDBC代理，此代理有两个功能
 
 此功能有两个用途
 1. 用于和kmodel其它模块配合，实现数据库和redis的强一致性。
-让业务系统可以充分利用redis缓存，包括对象关系缓存和业务缓存，系统会自动处理好一致性问题。
 2. 向应用程序提供类似于数据库触发器的通知，让此能力的应用范围不再仅仅局限于
 [seata](https://github.com/seata/seata)的分布式事务和本框架的redis一致性。
 
