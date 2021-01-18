@@ -26,7 +26,8 @@ kmodel-jdbc一个JDBC代理，此代理有两个功能
     ```
     insert into table(id, name) 
     values(?, ?), (?, ?)
-    on on conflict(id) do nothing
+    on on conflict(id) 
+    do nothing
     ```
 2. 无论使用何种关系型数据库，均可以在delete语句中使用join
 3. （即将完成）delete语句支持动态cascade子句，比如
@@ -53,16 +54,16 @@ kmodel-jdbc一个JDBC代理，此代理有两个功能
 大致实现原理和seata类似，拦截DML，并在单个事务内植入额外的查询，
 在数据库修改前后查询新旧数据，并通知应用程序。
 
-
-如果kmodel-jdbc被单独使用，
-或[seata](https://github.com/seata/seata)未处于分布式事务中，则由kmodel-jdbc独自完成；
-如果kmodel-jdbc和[seata](https://github.com/seata/seata)配合使用。
-且[seata](https://github.com/seata/seata)已处于分布式事务中，
-则由[seata](https://github.com/seata/seata)辅助完成。
-
-此功能由两个用处
+此功能由有个用处
 1. 用于和kmodel其它模块配合，完成数据库和redis的强一致性的保证。
 让业务系统可以充分利用redis缓存，包括对象关系缓存和业务缓存，系统会自动处理好一致性问题。
 2. 向应用程序提供类似于数据库触发器的通知，让此能力的应用范围
 不再仅仅局限于[seata](https://github.com/seata/seata)
 的分布式事务和本框架的redis一致性。
+
+此功能有两种等效的实现机制
+1. 如果kmodel-jdbc被单独使用，
+或[seata](https://github.com/seata/seata)未处于分布式事务中，则由kmodel-jdbc独自完成；
+2. 如果kmodel-jdbc和[seata](https://github.com/seata/seata)配合使用(需引入kmodel-seata依赖)。
+且[seata](https://github.com/seata/seata)已处于分布式事务中，
+则由[seata](https://github.com/seata/seata)辅助完成。
