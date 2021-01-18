@@ -45,7 +45,7 @@ kmodel-jdbc是一个JDBC代理，此代理有两个功能
 2. insert和update不支持join多表操作
 3. 不支持executeLargeBatch
 4. 不只是autoCommit = false模式，Statement未经显式commit/rollback会导致close报错提示
-5. 外键关系设置级联删除会导致报错提示，请使用扩展功能重的"delete ... cascade by constraint ..."语句替换
+5. 外键关系设置级联删除会导致报错提示，请使用扩展功能中的"delete ... cascade by constraint ..."语句替换
 
 ### 监听数据库
 无论单独使用kmodel-jdbc，
