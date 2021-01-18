@@ -12,15 +12,15 @@ kmodel-jdbc一个JDBC代理，此代理有两个功能
     ```
     insert into table(id, name) 
     values(?, ?), (?, ?)
-    on duplicated key update set
-    name = upper(values(name))
+    on duplicated key 
+    update set name = upper(values(name))
     ```
     或Postgres风格的
     ```
     insert into table(id, name) 
     values(?, ?), (?, ?)
-    on on conflict(id) do update set
-    name = upper(excluded.name)
+    on on conflict(id) 
+    do update set name = upper(excluded.name)
     ```
     或
     ```
