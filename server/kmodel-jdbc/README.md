@@ -43,7 +43,8 @@ kmodel-jdbc一个JDBC代理，此代理有两个功能
 请使用序列或更适合分布式系统开发的组建策略，例如，UUID，雪花id
 2. insert和update不支持join多表操作
 3. 不支持executeLargeBatch
-4. 不只是autoCommit = false模式
+4. 不只是autoCommit = false模式，Statement未经显式commit/rollback会导致close报错提示
+5. 外键关系设置级联删除会导致报错提示，请使用扩展功能重的"delete ... cascade by constraint ..."语句替换
 
 ### 监听数据库
 无论单独使用kmodel-jdbc，
@@ -53,14 +54,15 @@ kmodel-jdbc一个JDBC代理，此代理有两个功能
 在数据库修改前后查询新旧数据，并通知应用程序。
 
 
-如果kmodel-jdbc被单独使用，则独自完成；
-如果和[seata](https://github.com/seata/seata)配合使用，
+如果kmodel-jdbc被单独使用，
+或[seata](https://github.com/seata/seata)未处于分布式事务中，则由kmodel-jdbc独自完成；
+如果kmodel-jdbc和[seata](https://github.com/seata/seata)配合使用。
+且[seata](https://github.com/seata/seata)已处于分布式事务中，
 则由[seata](https://github.com/seata/seata)辅助完成。
 
 此功能由两个用处
-1. 用于和kmodel其它模块配合，完成数据库和redis的强一致性。
-让业务系统可以充分利用redis缓存，
-包括对象关系缓存和业务缓存，系统会自动处理好一致性问题。
-2. 想应用程序提供类似于数据库触发器的通知，让此能力的应用范围
-不进仅局限于[seata](https://github.com/seata/seata)
+1. 用于和kmodel其它模块配合，完成数据库和redis的强一致性的保证。
+让业务系统可以充分利用redis缓存，包括对象关系缓存和业务缓存，系统会自动处理好一致性问题。
+2. 向应用程序提供类似于数据库触发器的通知，让此能力的应用范围
+不再仅仅局限于[seata](https://github.com/seata/seata)
 的分布式事务和本框架的redis一致性。
