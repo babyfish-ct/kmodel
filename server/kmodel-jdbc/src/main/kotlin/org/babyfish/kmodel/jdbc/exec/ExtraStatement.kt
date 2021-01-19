@@ -1,6 +1,5 @@
 package org.babyfish.kmodel.jdbc.exec
 
-import org.babyfish.kmodel.jdbc.sql.TokenRange
 import org.slf4j.LoggerFactory
 import java.sql.Connection
 import java.sql.PreparedStatement
@@ -10,13 +9,13 @@ class ExtraStatement internal constructor(
     private val paramSequences: List<ParamSequence>
 ) {
     fun executeQuery(
-        targetConnection: Connection,
+        con: Connection,
         parameterSetters: List<(PreparedStatement.(Int) -> Unit)?>?,
         mapper: ((columnIndex: Int) -> Any?) -> Row
     ): MutableMap<List<Any>, Row> {
         LOGGER.info("Extra SQL: $sql")
         return if (paramSequences.isNotEmpty()) {
-            targetConnection
+            con
                 .prepareStatement(sql)
                 .using {
                     var queryParamIndex = 1
@@ -38,7 +37,7 @@ class ExtraStatement internal constructor(
                 }
         } else {
             mutableMapOf<List<Any>, Row>().apply {
-                val rs = targetConnection
+                val rs = con
                     .createStatement()
                     .executeQuery(sql)
                 while (rs.next()) {
@@ -50,12 +49,12 @@ class ExtraStatement internal constructor(
     }
 
     fun executeUpdate(
-        targetConnection: Connection,
+        con: Connection,
         parameterSetters: List<(PreparedStatement.(Int) -> Unit)?>?
     ): Int {
         LOGGER.info("Extra SQL: $sql")
         return if (paramSequences.isNotEmpty()) {
-            targetConnection
+            con
                 .prepareStatement(sql)
                 .using {
                     var queryParamIndex = 1
@@ -70,7 +69,7 @@ class ExtraStatement internal constructor(
                     it.executeUpdate()
                 }
         } else {
-            targetConnection
+            con
                 .createStatement()
                 .executeUpdate(sql)
         }

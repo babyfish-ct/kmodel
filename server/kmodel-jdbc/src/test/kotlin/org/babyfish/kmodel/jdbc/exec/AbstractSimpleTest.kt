@@ -5,7 +5,7 @@ import org.babyfish.kmodel.jdbc.metadata.QualifiedName
 import java.math.BigDecimal
 import java.sql.Connection
 
-abstract class AbstractExecTest : AbstractJdbcTest() {
+abstract class AbstractSimpleTest : AbstractJdbcTest() {
 
     override fun setupDatabase() {
         connection

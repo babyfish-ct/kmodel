@@ -13,14 +13,14 @@ internal class DeleteStatementBuilder(
 
     private var fromIndex = -1
 
-    private var whereIndex = -1
-
     private var firstCommaIndex = -1
 
     private var firstJoinIndex = -1
 
+    private var whereIndex = -1
+
     override fun accept(token: Token, index: Int) {
-        if (depth == 0) {
+        if (depth == 0 && channel == Channel.FROM) {
             if (firstCommaIndex == -1 && token.text == "," ) {
                 firstCommaIndex = index
             }
@@ -112,3 +112,4 @@ internal class DeleteStatementBuilder(
             index
         }
 }
+

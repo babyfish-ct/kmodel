@@ -1,6 +1,7 @@
 package org.babyfish.kmodel.jdbc
 
 import org.babyfish.kmodel.jdbc.exec.ExecutionContext
+import org.babyfish.kmodel.jdbc.metadata.ForeignKey
 import java.lang.UnsupportedOperationException
 import java.sql.CallableStatement
 import java.sql.Connection
@@ -9,7 +10,8 @@ import java.sql.Statement
 
 open class ConnectionProxy(
     val target: Connection,
-    private val dataChangedListener: (DataChangedEvent) -> Unit
+    private val dataChangedListener: (DataChangedEvent) -> Unit,
+    private val foreignKeyBehaviorSupplier: ((ForeignKey) -> ForeignKeyBehavior)?
 ) : Connection by target {
 
     private var _executionContext: ExecutionContext? = null
@@ -18,7 +20,10 @@ open class ConnectionProxy(
         get() {
             var ctx = _executionContext
             if (ctx === null) {
-                ctx = ExecutionContext(this.dataChangedListener)
+                ctx = ExecutionContext(
+                    dataChangedListener,
+                    foreignKeyBehaviorSupplier
+                )
                 _executionContext = ctx
             }
             return ctx

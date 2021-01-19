@@ -10,7 +10,7 @@ import java.math.BigDecimal
 import java.sql.Types
 import kotlin.test.expect
 
-class InsertTest : AbstractExecTest() {
+class InsertTest : AbstractSimpleTest() {
 
     @Test
     fun testSimpleByStatement() {

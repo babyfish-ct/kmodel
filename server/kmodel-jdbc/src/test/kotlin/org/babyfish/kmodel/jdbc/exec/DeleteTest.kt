@@ -10,7 +10,7 @@ import org.junit.Test
 import java.math.BigDecimal
 import kotlin.test.expect
 
-class DeleteTest : AbstractExecTest() {
+class DeleteTest : AbstractSimpleTest() {
 
     @Test
     fun testDeleteByStatement() {

@@ -2,31 +2,34 @@ package org.babyfish.kmodel.jdbc.exec
 
 import org.babyfish.kmodel.jdbc.ConnectionProxy
 import org.babyfish.kmodel.jdbc.DataChangedEvent
+import org.babyfish.kmodel.jdbc.ForeignKeyBehavior
 import org.babyfish.kmodel.jdbc.StatementProxy
+import org.babyfish.kmodel.jdbc.metadata.ForeignKey
 import org.babyfish.kmodel.jdbc.metadata.QualifiedName
 import org.babyfish.kmodel.jdbc.metadata.Table
 import org.babyfish.kmodel.jdbc.metadata.tableManager
-import org.babyfish.kmodel.jdbc.sql.*
+import org.babyfish.kmodel.jdbc.sql.AbstractDMLMutationStatement
+import org.babyfish.kmodel.jdbc.sql.DdlStatement
+import org.babyfish.kmodel.jdbc.sql.illegalSql
 import org.babyfish.kmodel.jdbc.sql.parseSqlStatements
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.SQLException
 
 internal class ExecutionContext(
-    private val dataChangedListener: (DataChangedEvent) -> Unit
+    private val dataChangedListener: (DataChangedEvent) -> Unit,
+    private val foreignKeyBehaviorSupplier: ((ForeignKey) -> ForeignKeyBehavior)?
 ) {
-
     private var statementProxy: StatementProxy? = null
 
     private var executions: List<Execution>? = null
 
     private var index = 0
 
-    private val beforeImageMap =
-        mutableMapOf<
-                QualifiedName, //tableName
-                MutableMap<List<Any>, Row?> // oldRows
-        >()
+    private val beforeImageMap = mutableMapOf<
+            QualifiedName,
+            MutableMap<List<Any>, Row?>
+    >()
 
     fun execute(
         sql: String,
@@ -181,7 +184,7 @@ internal class ExecutionContext(
         val afterImageMap = mutableMapOf<
                 QualifiedName, //tableName
                 Map<List<Any>, Row>
-        >()
+                >()
 
         val tableManager = tableManager(conProxy.target)
         for ((qualifiedName) in beforeImageMap) {

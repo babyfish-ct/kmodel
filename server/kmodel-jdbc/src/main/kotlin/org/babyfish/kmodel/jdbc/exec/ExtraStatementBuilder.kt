@@ -30,6 +30,16 @@ internal class ExtraStatementBuilder(
         builder.append(column.name)
     }
 
+    fun append(columns: List<Column>, tableAlias: String? = null) {
+        validate()
+        var addComma = false
+        for (column in columns) {
+            append(", ", addComma)
+            append(column, tableAlias)
+            addComma = true
+        }
+    }
+
     fun append(table: Table) {
         validate()
         builder.append(table.qualifiedName.schema)
@@ -86,6 +96,63 @@ internal class ExtraStatementBuilder(
         validate()
         builder.append("?")
         paramSequences += ExtraValueParamSequence(value, sqlType)
+    }
+
+    fun <R> appendEquality(
+        columns: List<Column>,
+        tableAlias: String? = null,
+        rows: Collection<R>,
+        valuesGetter: (R) -> List<Any?>
+    ) {
+        validate()
+        if (rows.isEmpty()) {
+            append("1 = 0")
+        } else if (columns.size == 1 && rows.size == 1) {
+            val value = valuesGetter(rows.first())
+            append(columns[0], tableAlias)
+            append(" = ")
+            appendExtraParam(value, columns[0].type)
+        } else if (columns.size == 1) {
+            append(columns[0], tableAlias)
+            append(" in (")
+            var addComma = false
+            for (row in rows) {
+                append(", ", addComma)
+                appendExtraParams(valuesGetter(row), columns)
+                addComma = true
+            }
+            append(")")
+        } else {
+            append("(")
+            append(columns, tableAlias)
+            append(") in (")
+            var addComma = false
+            for (row in rows) {
+                append(", ", addComma)
+                append("(")
+                appendExtraParams(valuesGetter(row), columns)
+                append(")")
+                addComma = true
+            }
+            append(")")
+        }
+    }
+
+    private fun appendExtraParams(
+        values: List<Any?>,
+        columns: List<Column>
+    ) {
+        if (values.size != columns.size) {
+            throw IllegalArgumentException(
+                "values.size must be equal to columns.size"
+            )
+        }
+        var addComma = false
+        for (i in values.indices) {
+            append(", ", addComma)
+            appendExtraParam(values[i], columns[i].type)
+            addComma = true
+        }
     }
 
     fun freeze() {

@@ -1,5 +1,6 @@
 package org.babyfish.kmodel.jdbc
 
+import org.babyfish.kmodel.jdbc.metadata.ForeignKey
 import org.babyfish.kmodel.jdbc.metadata.tableManager
 import org.junit.After
 import org.junit.Before
@@ -42,10 +43,10 @@ abstract class AbstractJdbcTest {
             prevLowercase = lowcase
         }
         val con = ConnectionProxy(
-            DriverManager.getConnection("jdbc:h2:mem:${dbNameBuilder}", "sa", null)
-        ) {
-            dataChangedEvent = it
-        }
+            DriverManager.getConnection("jdbc:h2:mem:${dbNameBuilder}", "sa", null),
+            { dataChangedEvent = it },
+            { foreignKeyBehavior(it) }
+        )
         _con = con
         transaction {
             setupDatabase()
@@ -76,6 +77,10 @@ abstract class AbstractJdbcTest {
         connection.commit()
         return result
     }
+
+    protected open fun foreignKeyBehavior(
+        foreignKey: ForeignKey
+    ): ForeignKeyBehavior = ForeignKeyBehavior.NONE
 
     companion object {
         @BeforeClass
