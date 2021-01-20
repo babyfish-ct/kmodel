@@ -1,5 +1,6 @@
 package org.babyfish.kmodel.jdbc.exec
 
+import org.babyfish.kmodel.jdbc.ForeignKeyBehavior
 import org.babyfish.kmodel.jdbc.SqlLexer
 import org.babyfish.kmodel.jdbc.StatementProxy
 import org.babyfish.kmodel.jdbc.metadata.Column
@@ -78,9 +79,7 @@ class DeletePlan(
         val updateCount = if (beforeRowMap.isEmpty()) {
             0
         } else {
-            cascadeMap(statementProxy.targetCon).let {
-                println(it)
-            }
+            executeCascadeMutations(statementProxy, beforeRowMap)
             mutationStatementBuilderTemplate
                 .clone()
                 .apply {
@@ -97,6 +96,46 @@ class DeletePlan(
             updateCount = updateCount,
             beforeRowMap = beforeRowMap
         )
+    }
+
+    private fun executeCascadeMutations(
+        statementProxy: StatementProxy,
+        beforeRowMap: Map<List<Any>, Row>
+    ) {
+        if (beforeRowMap.isNotEmpty()) {
+            cascadeMap(statementProxy.targetCon).values.forEach {
+                val behavior = statementProxy
+                    .connection
+                    .foreignKeyBehaviorSupplier
+                    ?.invoke(it.exportedKey)
+                    ?: ForeignKeyBehavior.NONE
+                if (behavior == ForeignKeyBehavior.UPDATE_SET_NULL) {
+                    it
+                        .updateStatementBuilderTemplate
+                        .clone()
+                        .apply {
+                            appendEqualities(
+                                columns = it.exportedKey.childColumns,
+                                rows = beforeRowMap.keys
+                            )
+                        }
+                        .build()
+                        .executeUpdate(statementProxy.connection, null)
+                } else if (behavior == ForeignKeyBehavior.DELETE_CASCADE) {
+                    it
+                        .deleteStatementBuilderTemplate
+                        .clone()
+                        .apply {
+                            appendEqualities(
+                                columns = it.exportedKey.childColumns,
+                                rows = beforeRowMap.keys
+                            )
+                        }
+                        .build()
+                        .executeUpdate(statementProxy.connection, null)
+                }
+            }
+        }
     }
 
     private fun cascadeMap(
@@ -124,38 +163,26 @@ class DeletePlan(
     ): Cascade =
         Cascade(
             exportedKey = foreignKey,
-            selectStatementBuilderTemplate =
-                ExtraStatementBuilder()
-                    .apply {
-                        append("select ")
-                        append(foreignKey.childTable.primaryKeyColumns)
-                        append(", ")
-                        append(foreignKey.childTableColumns)
-                        append(" from ")
-                        append(foreignKey.childTable)
-                        append(" where ")
-                        freeze()
-                    },
             updateStatementBuilderTemplate =
                 ExtraStatementBuilder()
                     .apply {
-                        append("select ")
-                        append(foreignKey.childTable.primaryKeyColumns)
-                        append(", ")
-                        append(foreignKey.childTableColumns)
-                        append(" from ")
+                        append("update ")
                         append(foreignKey.childTable)
+                        append(" set ")
+                        var addComma = false
+                        for (column in foreignKey.childColumns) {
+                            append(", ", addComma)
+                            append(column)
+                            append(" = null")
+                            addComma = true
+                        }
                         append(" where ")
                         freeze()
                     },
             deleteStatementBuilderTemplate =
                 ExtraStatementBuilder()
                     .apply {
-                        append("select ")
-                        append(foreignKey.childTable.primaryKeyColumns)
-                        append(", ")
-                        append(foreignKey.childTableColumns)
-                        append(" from ")
+                        append("delete from ")
                         append(foreignKey.childTable)
                         append(" where ")
                         freeze()
@@ -164,8 +191,37 @@ class DeletePlan(
 
     private class Cascade(
         val exportedKey:ForeignKey,
-        val selectStatementBuilderTemplate: ExtraStatementBuilder,
         val updateStatementBuilderTemplate: ExtraStatementBuilder,
         val deleteStatementBuilderTemplate: ExtraStatementBuilder
     )
+}
+
+private fun mapChildKey(
+    foreignKey: ForeignKey,
+    valueGetter: (Int) -> Any?
+): Row {
+    val pkColumns = foreignKey.childTable.primaryKeyColumns
+    val pkValueMap = pkColumns.indices.associateBy({pkColumns[it].name}) {
+        valueGetter(it + 1)!!
+    }
+    val fkColumns = foreignKey.childColumns
+    val fkValueMap = fkColumns.indices.associateBy({fkColumns[it].name}) {
+        valueGetter(it + pkColumns.size + 1)
+    }
+    return Row(pkValueMap, fkValueMap)
+}
+
+private fun mapChildRow(
+    foreignKey: ForeignKey,
+    valueGetter: (Int) -> Any?
+): Row {
+    val pkColumns = foreignKey.childTable.primaryKeyColumns
+    val pkValueMap = pkColumns.indices.associateBy({pkColumns[it].name}) {
+        valueGetter(it + 1)!!
+    }
+    val otherColumns = foreignKey.childTable.columnMap.values - pkColumns
+    val otherValueMap = otherColumns.indices.associateBy({otherColumns[it].name}) {
+        valueGetter(it + pkColumns.size + 1)
+    }
+    return Row(pkValueMap, otherValueMap)
 }

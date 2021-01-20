@@ -1,12 +1,16 @@
 package org.babyfish.kmodel.jdbc.exec
 
 import org.babyfish.kmodel.jdbc.AbstractJdbcTest
+import org.babyfish.kmodel.jdbc.ForeignKeyBehavior
+import org.babyfish.kmodel.jdbc.metadata.ForeignKey
 import org.junit.Test
 import java.math.BigDecimal
 import java.sql.Types
 import kotlin.test.Ignore
 
 class CascadeDeleteTest : AbstractJdbcTest() {
+
+    private var foreignKeyBehavior = ForeignKeyBehavior.NONE
 
     override fun setupDatabase() {
         transaction {
@@ -28,7 +32,7 @@ class CascadeDeleteTest : AbstractJdbcTest() {
                             id bigint not null,
                             name varchar(50) not null,
                             salary number not null,
-                            department_id bigint not null,
+                            department_id bigint,
                             supervisor_id bigint,
                             constraint pk_employee 
                                 primary key(id),
@@ -120,18 +124,54 @@ class CascadeDeleteTest : AbstractJdbcTest() {
         }
     }
 
-    @Ignore
     @Test
-    fun test() {
-        connection
-            .prepareStatement("""
+    fun testDeleteCascade() {
+        overrideForeignKeyBehavior(ForeignKeyBehavior.DELETE_CASCADE) {
+            connection
+                .prepareStatement(
+                    """
                 delete from department where id = ?
                 """.trimIndent()
-            )
-            .apply {
-                setLong(1, 1)
-            }
-            .executeUpdate()
+                )
+                .apply {
+                    setLong(1, 1)
+                }
+                .executeUpdate()
+        }
+    }
+
+    @Test
+    fun testUpdateSetNull() {
+        overrideForeignKeyBehavior(ForeignKeyBehavior.UPDATE_SET_NULL) {
+            connection
+                .prepareStatement(
+                    """
+                delete from department where id = ?
+                """.trimIndent()
+                )
+                .apply {
+                    setLong(1, 1)
+                }
+                .executeUpdate()
+        }
+    }
+
+    override fun foreignKeyBehavior(
+        foreignKey: ForeignKey
+    ): ForeignKeyBehavior =
+        foreignKeyBehavior
+
+    private fun overrideForeignKeyBehavior(
+        behavior: ForeignKeyBehavior,
+        action: () -> Unit
+    ) {
+        val oldBehavior = foreignKeyBehavior
+        foreignKeyBehavior = behavior
+        try {
+            action()
+        } finally {
+            foreignKeyBehavior = oldBehavior
+        }
     }
 }
 

@@ -1,5 +1,6 @@
 package org.babyfish.kmodel.jdbc.exec
 
+import org.babyfish.kmodel.jdbc.ConnectionProxy
 import org.slf4j.LoggerFactory
 import java.sql.Connection
 import java.sql.PreparedStatement
@@ -52,7 +53,9 @@ class ExtraStatement internal constructor(
         con: Connection,
         parameterSetters: List<(PreparedStatement.(Int) -> Unit)?>?
     ): Int {
-        LOGGER.info("Extra SQL: $sql")
+        if (con !is ConnectionProxy) {
+            LOGGER.info("Extra SQL: $sql")
+        }
         return if (paramSequences.isNotEmpty()) {
             con
                 .prepareStatement(sql)

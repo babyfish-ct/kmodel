@@ -2,14 +2,14 @@ package org.babyfish.kmodel.jdbc.metadata
 
 data class ForeignKey(
     val name: String,
-    val childTableColumns: List<Column>,
-    val parentTableColumns: List<Column>
+    val childColumns: List<Column>,
+    val parentColumns: List<Column>
 ) {
     val childTable: Table
-        get() = childTableColumns.first().table
+        get() = childColumns.first().table
 
     val parentTable: Table
-        get() = parentTableColumns.first().table
+        get() = parentColumns.first().table
 }
 
 internal class ForeignKeyListBuilder {
@@ -60,8 +60,8 @@ internal class ForeignKeyListBuilder {
         fun build(): ForeignKey =
             ForeignKey(
                 name = name,
-                childTableColumns = childTableColumns,
-                parentTableColumns = parentTableColumns
+                childColumns = childTableColumns,
+                parentColumns = parentTableColumns
             )
     }
 }

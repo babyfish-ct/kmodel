@@ -3,7 +3,6 @@ package org.babyfish.kmodel.jdbc.metadata
 import org.babyfish.kmodel.jdbc.AbstractJdbcTest
 import org.babyfish.kmodel.test.*
 import org.junit.Test
-import java.sql.Connection
 import java.sql.SQLException
 import java.sql.Types
 import kotlin.test.assertFailsWith
@@ -222,7 +221,7 @@ class MetadataTest : AbstractJdbcTest() {
             obj(ForeignKey::parentTable) {
                 same(accountTable)
             }
-            list(ForeignKey::childTableColumns) {
+            list(ForeignKey::childColumns) {
                 size(2)
                 obj(0) {
                     same(transactionTable.columnMap["SOURCE_BANK_CODE"])
@@ -231,7 +230,7 @@ class MetadataTest : AbstractJdbcTest() {
                     same(transactionTable.columnMap["SOURCE_USER_CODE"])
                 }
             }
-            list(ForeignKey::parentTableColumns) {
+            list(ForeignKey::parentColumns) {
                 size(2)
                 obj(0) {
                     same(accountTable.columnMap["BANK_CODE"])
@@ -281,11 +280,11 @@ class MetadataTest : AbstractJdbcTest() {
                     value(ForeignKey::name) eq "FK_TREE_PARENT"
                     value(ForeignKey::childTable) same table
                     value(ForeignKey::parentTable) same table
-                    list(ForeignKey::childTableColumns) {
+                    list(ForeignKey::childColumns) {
                         size(1)
                         value(0) same table.columnMap["PARENT_ID"]
                     }
-                    list(ForeignKey::parentTableColumns) {
+                    list(ForeignKey::parentColumns) {
                         size(1)
                         value(0) same table.columnMap["ID"]
                     }
@@ -297,11 +296,11 @@ class MetadataTest : AbstractJdbcTest() {
                     value(ForeignKey::name) eq "FK_TREE_PARENT"
                     value(ForeignKey::childTable) same table
                     value(ForeignKey::parentTable) same table
-                    list(ForeignKey::childTableColumns) {
+                    list(ForeignKey::childColumns) {
                         size(1)
                         value(0) same table.columnMap["PARENT_ID"]
                     }
-                    list(ForeignKey::parentTableColumns) {
+                    list(ForeignKey::parentColumns) {
                         size(1)
                         value(0) same table.columnMap["ID"]
                     }

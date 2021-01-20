@@ -44,13 +44,11 @@ abstract class AbstractDMLMutationPlan<S: AbstractDMLMutationStatement>(
     internal fun ExtraStatementBuilder.determineMutationCondition(
         beforeRows: Collection<Row>
     ) {
-        addConditionByPkValues(
-            table,
-            statement.primaryTableAlias,
-            beforeRows
-        ) { row, _, pkColumn ->
-            row[pkColumn.name]!!
-        }
+        appendEqualities(
+            columns = table.primaryKeyColumns,
+            tableAlias = statement.primaryTableAlias,
+            rows = beforeRows.map { it.pkValues }
+        )
     }
 
     internal open fun mapExtraRow(rsValueGetter: (columnIndex: Int) -> Any?): Row =

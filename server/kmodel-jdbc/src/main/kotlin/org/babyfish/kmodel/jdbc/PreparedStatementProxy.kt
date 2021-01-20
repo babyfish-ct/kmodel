@@ -22,6 +22,9 @@ class PreparedStatementProxy internal constructor(
 
     internal val parameters = MutableParameters()
 
+    override fun getConnection(): ConnectionProxy =
+        super.getConnection()
+
     init {
         (target as LazyProxy<PreparedStatement>).addTargetInitializedListener {
             for (paramIndex in 1 until parameters.setters.size) {
@@ -336,7 +339,7 @@ class PreparedStatementProxy internal constructor(
     }
 
     override fun execute(): Boolean =
-        proxyCon.executionContext.execute(
+        connection.executionContext.execute(
             sql,
             parameters.toReadonly(),
             this
@@ -346,7 +349,7 @@ class PreparedStatementProxy internal constructor(
         if (execute()) {
             -1
         } else {
-            proxyCon.executionContext.getUpdateCount()
+            connection.executionContext.getUpdateCount()
         }
 
     override fun executeLargeUpdate(): Long {

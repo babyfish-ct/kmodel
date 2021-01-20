@@ -91,26 +91,12 @@ class InsertPlan(
                 }
             }
         }
-        val compositeKey = conflictKeyColumns.size > 1
         append(" where ")
-        append("(", compositeKey)
-        append(conflictKeyColumns.joinToString() { it.name })
-        append(")", compositeKey)
-        if (!compositeKey && conflictKeyValueLists.size == 1) {
-            append(" = ")
-            append(conflictKeyValueLists[0][0], statement)
-        } else {
-            append(" in (")
-            var addComma = false
-            for (primaryKeyValueList in conflictKeyValueLists) {
-                append(", ", addComma)
-                append("(", compositeKey)
-                append(primaryKeyValueList, statement)
-                append(")", compositeKey)
-                addComma = true
-            }
-            append(")")
-        }
+        appendEqualities(
+            columns = conflictKeyColumns,
+            rows = conflictKeyValueLists,
+            statement = statement
+        )
     }
 
     override fun mapExtraRow(rsValueGetter: (columnIndex: Int) -> Any?): Row {

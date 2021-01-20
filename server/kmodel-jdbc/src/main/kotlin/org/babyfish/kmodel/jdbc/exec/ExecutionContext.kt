@@ -222,22 +222,14 @@ internal class ExecutionContext(
         return ExtraStatementBuilder()
             .apply {
                 append("select ")
-                var addComma = false
-                for (column in table.columnMap.values) {
-                    append(", ", addComma)
-                    append(column)
-                    addComma = true
-                }
+                append(table.columnMap.values)
                 append(" from ")
                 append(table)
                 append(" where ")
-                addConditionByPkValues(
-                    table,
-                    null,
-                    beforeRowMap.keys
-                ) { row, pkColumnIndex, _ ->
-                    row[pkColumnIndex]
-                }
+                appendEqualities(
+                    columns = table.primaryKeyColumns,
+                    rows = beforeRowMap.keys
+                )
             }
             .build()
             .executeQuery(

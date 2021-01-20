@@ -6,11 +6,14 @@ import java.sql.Connection
 import java.sql.Statement
 
 open class StatementProxy internal constructor(
-        internal val proxyCon: ConnectionProxy,
-        internal open val target: Statement
+    private val proxyCon: ConnectionProxy,
+    internal open val target: Statement
 ): Statement by target {
 
     internal val batches = mutableListOf<Batch>()
+
+    override fun getConnection(): ConnectionProxy =
+        proxyCon
 
     internal val targetCon: Connection
         get() = proxyCon.target

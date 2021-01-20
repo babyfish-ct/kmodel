@@ -30,7 +30,7 @@ internal class ExtraStatementBuilder(
         builder.append(column.name)
     }
 
-    fun append(columns: List<Column>, tableAlias: String? = null) {
+    fun append(columns: Collection<Column>, tableAlias: String? = null) {
         validate()
         var addComma = false
         for (column in columns) {
@@ -98,27 +98,55 @@ internal class ExtraStatementBuilder(
         paramSequences += ExtraValueParamSequence(value, sqlType)
     }
 
-    fun <R> appendEquality(
+    fun appendEqualities(
         columns: List<Column>,
         tableAlias: String? = null,
-        rows: Collection<R>,
-        valuesGetter: (R) -> List<Any?>
+        rows: Collection<List<TokenRange>>,
+        statement: Statement
+    ) {
+        appendEqualities(
+            columns = columns,
+            tableAlias = tableAlias,
+            rows = rows
+        ) { v, _ ->
+            append(v, statement)
+        }
+    }
+
+    fun appendEqualities(
+        columns: List<Column>,
+        tableAlias: String? = null,
+        rows: Collection<List<Any?>>
+    ) {
+        appendEqualities(
+            columns = columns,
+            tableAlias = tableAlias,
+            rows = rows
+        ) { v, c ->
+            appendExtraParam(v, c.type)
+        }
+    }
+
+    private fun <V> appendEqualities(
+        columns: List<Column>,
+        tableAlias: String?,
+        rows: Collection<List<V>>,
+        valueAcceptor: (V, Column) -> Unit
     ) {
         validate()
         if (rows.isEmpty()) {
             append("1 = 0")
         } else if (columns.size == 1 && rows.size == 1) {
-            val value = valuesGetter(rows.first())
             append(columns[0], tableAlias)
             append(" = ")
-            appendExtraParam(value, columns[0].type)
+            acceptEqualityRow(rows.first(), columns, valueAcceptor)
         } else if (columns.size == 1) {
             append(columns[0], tableAlias)
             append(" in (")
             var addComma = false
             for (row in rows) {
                 append(", ", addComma)
-                appendExtraParams(valuesGetter(row), columns)
+                acceptEqualityRow(row, columns, valueAcceptor)
                 addComma = true
             }
             append(")")
@@ -130,7 +158,7 @@ internal class ExtraStatementBuilder(
             for (row in rows) {
                 append(", ", addComma)
                 append("(")
-                appendExtraParams(valuesGetter(row), columns)
+                acceptEqualityRow(row, columns, valueAcceptor)
                 append(")")
                 addComma = true
             }
@@ -138,19 +166,20 @@ internal class ExtraStatementBuilder(
         }
     }
 
-    private fun appendExtraParams(
-        values: List<Any?>,
-        columns: List<Column>
+    private fun <V> acceptEqualityRow(
+        row: List<V>,
+        columns: List<Column>,
+        valueAcceptor: (V, Column) -> Unit
     ) {
-        if (values.size != columns.size) {
+        if (row.size != columns.size) {
             throw IllegalArgumentException(
-                "values.size must be equal to columns.size"
+                "row.size must be equal to columns.size"
             )
         }
         var addComma = false
-        for (i in values.indices) {
+        for (i in row.indices) {
             append(", ", addComma)
-            appendExtraParam(values[i], columns[i].type)
+            valueAcceptor(row[i], columns[i])
             addComma = true
         }
     }
