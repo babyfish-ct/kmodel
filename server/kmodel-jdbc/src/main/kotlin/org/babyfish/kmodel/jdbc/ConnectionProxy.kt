@@ -10,8 +10,7 @@ import java.sql.Statement
 
 open class ConnectionProxy(
     val target: Connection,
-    val dataChangedListener: (DataChangedEvent) -> Unit,
-    val foreignKeyBehaviorSupplier: ((ForeignKey) -> ForeignKeyBehavior)?
+    val cfg: Configuration
 ) : Connection by target {
 
     private var _executionContext: ExecutionContext? = null
@@ -20,10 +19,7 @@ open class ConnectionProxy(
         get() {
             var ctx = _executionContext
             if (ctx === null) {
-                ctx = ExecutionContext(
-                    dataChangedListener,
-                    foreignKeyBehaviorSupplier
-                )
+                ctx = ExecutionContext(cfg)
                 _executionContext = ctx
             }
             return ctx

@@ -1,9 +1,6 @@
 package org.babyfish.kmodel.jdbc.exec
 
-import org.babyfish.kmodel.jdbc.ConnectionProxy
-import org.babyfish.kmodel.jdbc.DataChangedEvent
-import org.babyfish.kmodel.jdbc.ForeignKeyBehavior
-import org.babyfish.kmodel.jdbc.StatementProxy
+import org.babyfish.kmodel.jdbc.*
 import org.babyfish.kmodel.jdbc.metadata.ForeignKey
 import org.babyfish.kmodel.jdbc.metadata.QualifiedName
 import org.babyfish.kmodel.jdbc.metadata.Table
@@ -17,8 +14,7 @@ import java.sql.ResultSet
 import java.sql.SQLException
 
 internal class ExecutionContext(
-    private val dataChangedListener: (DataChangedEvent) -> Unit,
-    private val foreignKeyBehaviorSupplier: ((ForeignKey) -> ForeignKeyBehavior)?
+    private val cfg: Configuration
 ) {
     private var statementProxy: StatementProxy? = null
 
@@ -192,7 +188,7 @@ internal class ExecutionContext(
             tableMap[qualifiedName] = table
             afterImageMap[qualifiedName] = afterRowMap(table, conProxy)
         }
-        dataChangedListener(
+        cfg.dataChangedListener(
             DataChangedEvent(
                 beforeImageMap = beforeImageMap,
                 afterImageMap = afterImageMap

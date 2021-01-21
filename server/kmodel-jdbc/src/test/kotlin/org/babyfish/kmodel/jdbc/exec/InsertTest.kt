@@ -1,7 +1,7 @@
 package org.babyfish.kmodel.jdbc.exec
 
 import org.babyfish.kmodel.jdbc.DataChangedEvent
-import org.babyfish.kmodel.test.toNonNull
+import org.babyfish.kmodel.test.asNonNull
 import org.babyfish.kmodel.test.expectObj
 import org.babyfish.kmodel.test.map
 import org.babyfish.kmodel.test.obj
@@ -441,7 +441,7 @@ class InsertTest : AbstractSimpleTest() {
                 map(PRODUCT_QUALIFIED_NAME) {
                     size(4)
                     obj(listOf(3L)) {
-                        toNonNull {
+                        asNonNull {
                             list(Row::pkValues) {
                                 size(1)
                                 value(0) eq 3L
@@ -455,7 +455,7 @@ class InsertTest : AbstractSimpleTest() {
                         }
                     }
                     obj(listOf(4L)) {
-                        toNonNull {
+                        asNonNull {
                             list(Row::pkValues) {
                                 size(1)
                                 value(0) eq 4L

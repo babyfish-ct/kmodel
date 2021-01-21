@@ -2,7 +2,7 @@ package org.babyfish.kmodel.jdbc.exec
 
 import org.babyfish.kmodel.jdbc.DataChangedEvent
 import org.babyfish.kmodel.jdbc.metadata.QualifiedName
-import org.babyfish.kmodel.test.toNonNull
+import org.babyfish.kmodel.test.asNonNull
 import org.babyfish.kmodel.test.expectObj
 import org.babyfish.kmodel.test.map
 import org.babyfish.kmodel.test.obj
@@ -85,7 +85,7 @@ class DeleteTest : AbstractSimpleTest() {
                 ) {
                     size(2)
                     obj(listOf(1L)) {
-                        toNonNull {
+                        asNonNull {
                             value(Row::pkValues) eq listOf(1L)
                             value(Row::otherValueMap) eq mapOf(
                                 "NAME" to "Polk",
@@ -95,7 +95,7 @@ class DeleteTest : AbstractSimpleTest() {
                         }
                     }
                     obj(listOf(2L)) {
-                        toNonNull {
+                        asNonNull {
                             value(Row::pkValues) eq listOf(2L)
                             value(Row::otherValueMap) eq mapOf(
                                 "NAME" to "Beef",

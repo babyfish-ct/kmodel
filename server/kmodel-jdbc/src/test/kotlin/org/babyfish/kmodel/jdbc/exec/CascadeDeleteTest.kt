@@ -1,16 +1,22 @@
 package org.babyfish.kmodel.jdbc.exec
 
 import org.babyfish.kmodel.jdbc.AbstractJdbcTest
-import org.babyfish.kmodel.jdbc.ForeignKeyBehavior
+import org.babyfish.kmodel.jdbc.DataChangedEvent
+import org.babyfish.kmodel.jdbc.DeletionOption
 import org.babyfish.kmodel.jdbc.metadata.ForeignKey
+import org.babyfish.kmodel.jdbc.metadata.QualifiedName
+import org.babyfish.kmodel.test.expectObj
+import org.babyfish.kmodel.test.map
+import org.babyfish.kmodel.test.obj
+import org.babyfish.kmodel.test.asNonNull
 import org.junit.Test
 import java.math.BigDecimal
 import java.sql.Types
-import kotlin.test.Ignore
+import kotlin.test.expect
 
 class CascadeDeleteTest : AbstractJdbcTest() {
 
-    private var foreignKeyBehavior = ForeignKeyBehavior.NONE
+    private var foreignKeyBehavior = DeletionOption.NONE
 
     override fun setupDatabase() {
         transaction {
@@ -125,8 +131,9 @@ class CascadeDeleteTest : AbstractJdbcTest() {
     }
 
     @Test
-    fun testDeleteCascade() {
-        overrideForeignKeyBehavior(ForeignKeyBehavior.DELETE_CASCADE) {
+    fun testDeleteDepartmentCascade() {
+        overrideDeletionOption(DeletionOption.CASCADE) {
+
             connection
                 .prepareStatement(
                     """
@@ -141,33 +148,76 @@ class CascadeDeleteTest : AbstractJdbcTest() {
     }
 
     @Test
-    fun testUpdateSetNull() {
-        overrideForeignKeyBehavior(ForeignKeyBehavior.UPDATE_SET_NULL) {
-            connection
-                .prepareStatement(
-                    """
-                delete from department where id = ?
-                """.trimIndent()
-                )
-                .apply {
-                    setLong(1, 1)
+    fun testDeleteDepartmentSetNull() {
+        overrideDeletionOption(DeletionOption.SET_NULL) {
+            executeUpdate {
+                expect(1) {
+                    connection
+                        .prepareStatement(
+                            """
+                            delete from department where id = ?
+                            """.trimIndent()
+                        )
+                        .apply {
+                            setLong(1, 1)
+                        }
+                        .executeUpdate()
                 }
-                .executeUpdate()
+            }
+        }.let {
+            expectObj(it) {
+                map(DataChangedEvent::beforeImageMap) {
+                    size(2)
+                    map(DEPARTMENT_QUALIFIED_NAME) {
+                        size(1)
+                        obj(listOf(1L)) {
+                            asNonNull {
+                                value(Row::pkValues) eq listOf(1L)
+                                value(Row::otherValueMap) eq mapOf(
+                                    "NAME" to "Product"
+                                )
+                            }
+                        }
+                    }
+                    map(EMPLOYEE_QUALIFIED_NAME) {
+                        size(7)
+                        for (i in 1..7) {
+                            obj(listOf(i.toLong())) {
+                                asNonNull {
+                                    value(Row::pkValues) eq listOf(i.toLong())
+                                    value(Row::otherValueMap) eq mapOf(
+                                        "DEPARTMENT_ID" to 1L
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                map(DataChangedEvent::afterImageMap) {
+                    size(2)
+                    map(DEPARTMENT_QUALIFIED_NAME) {
+                        size(0)
+                    }
+                    map(EMPLOYEE_QUALIFIED_NAME) {
+                        size(7)
+                    }
+                }
+            }
         }
     }
 
-    override fun foreignKeyBehavior(
+    override fun deletionOption(
         foreignKey: ForeignKey
-    ): ForeignKeyBehavior =
+    ): DeletionOption =
         foreignKeyBehavior
 
-    private fun overrideForeignKeyBehavior(
-        behavior: ForeignKeyBehavior,
-        action: () -> Unit
-    ) {
+    private fun <R> overrideDeletionOption(
+        behavior: DeletionOption,
+        action: () -> R
+    ): R {
         val oldBehavior = foreignKeyBehavior
         foreignKeyBehavior = behavior
-        try {
+        return try {
             action()
         } finally {
             foreignKeyBehavior = oldBehavior
@@ -177,3 +227,17 @@ class CascadeDeleteTest : AbstractJdbcTest() {
 
 private inline fun <R> children(action: () -> R): R =
     action()
+
+private val DEPARTMENT_QUALIFIED_NAME =
+    QualifiedName(
+        "CASCADE-DELETE-TEST",
+        "PUBLIC",
+        "DEPARTMENT"
+    )
+
+private val EMPLOYEE_QUALIFIED_NAME =
+    QualifiedName(
+        "CASCADE-DELETE-TEST",
+        "PUBLIC",
+        "EMPLOYEE"
+    )

@@ -75,7 +75,7 @@ class ObjectContext<O> internal constructor(
     }
 }
 
-inline fun <O> ObjectContext<O?>.toNonNull(
+inline fun <O> ObjectContext<O?>.asNonNull(
     contextAction: ObjectContext<O>.() -> Unit
 ) {
     (this as ObjectContext<O>).contextAction()

@@ -1,6 +1,6 @@
 package org.babyfish.kmodel.jdbc.exec
 
-import org.babyfish.kmodel.jdbc.ForeignKeyBehavior
+import org.babyfish.kmodel.jdbc.DeletionOption
 import org.babyfish.kmodel.jdbc.SqlLexer
 import org.babyfish.kmodel.jdbc.StatementProxy
 import org.babyfish.kmodel.jdbc.metadata.Column
@@ -106,10 +106,11 @@ class DeletePlan(
             cascadeMap(statementProxy.targetCon).values.forEach {
                 val behavior = statementProxy
                     .connection
-                    .foreignKeyBehaviorSupplier
+                    .cfg
+                    .deletionOptionSupplier
                     ?.invoke(it.exportedKey)
-                    ?: ForeignKeyBehavior.NONE
-                if (behavior == ForeignKeyBehavior.UPDATE_SET_NULL) {
+                    ?: DeletionOption.NONE
+                if (behavior == DeletionOption.SET_NULL) {
                     it
                         .updateStatementBuilderTemplate
                         .clone()
@@ -121,7 +122,7 @@ class DeletePlan(
                         }
                         .build()
                         .executeUpdate(statementProxy.connection, null)
-                } else if (behavior == ForeignKeyBehavior.DELETE_CASCADE) {
+                } else if (behavior == DeletionOption.CASCADE) {
                     it
                         .deleteStatementBuilderTemplate
                         .clone()
