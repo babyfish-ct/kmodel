@@ -13,8 +13,12 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.SQLException
 
-internal class ExecutionContext(
-    private val cfg: Configuration
+internal open class ExecutionContext protected constructor(
+    protected val cfg: Configuration,
+    protected val beforeImageMap: MutableMap<
+            QualifiedName,
+            MutableMap<List<Any>, Row?>
+    >
 ) {
     private var statementProxy: StatementProxy? = null
 
@@ -22,10 +26,8 @@ internal class ExecutionContext(
 
     private var index = 0
 
-    private val beforeImageMap = mutableMapOf<
-            QualifiedName,
-            MutableMap<List<Any>, Row?>
-    >()
+    fun subContext(): ExecutionContext =
+        ExecutionContext(cfg, beforeImageMap)
 
     fun execute(
         sql: String,
@@ -175,27 +177,6 @@ internal class ExecutionContext(
         }
     }
 
-    fun commit(conProxy: ConnectionProxy) {
-        val tableMap = mutableMapOf<QualifiedName, Table>()
-        val afterImageMap = mutableMapOf<
-                QualifiedName, //tableName
-                Map<List<Any>, Row>
-                >()
-
-        val tableManager = tableManager(conProxy.target)
-        for ((qualifiedName) in beforeImageMap) {
-            val table = tableManager[conProxy.target, qualifiedName.toString()]
-            tableMap[qualifiedName] = table
-            afterImageMap[qualifiedName] = afterRowMap(table, conProxy)
-        }
-        cfg.dataChangedListener(
-            DataChangedEvent(
-                beforeImageMap = beforeImageMap,
-                afterImageMap = afterImageMap
-            )
-        )
-    }
-
     private fun isResultSet(): Boolean {
         val executions = this.executions ?: error("Internal bug")
         return if (index < executions.size) {
@@ -207,37 +188,6 @@ internal class ExecutionContext(
 
     private fun noExecutedStatement(): Nothing {
         throw SQLException("No executed statement")
-    }
-
-    private fun afterRowMap(
-        table: Table,
-        conProxy: ConnectionProxy
-    ) : Map<List<Any>, Row> {
-        val beforeRowMap = beforeImageMap[table.qualifiedName]
-            ?: return emptyMap()
-        return ExtraStatementBuilder()
-            .apply {
-                append("select ")
-                append(table.columnMap.values)
-                append(" from ")
-                append(table)
-                append(" where ")
-                appendEqualities(
-                    columns = table.primaryKeyColumns,
-                    rows = beforeRowMap.keys
-                )
-            }
-            .build()
-            .executeQuery(
-                conProxy.target,
-                emptyList()
-            ) {
-                mapRow(
-                    table,
-                    table.columnMap.values.toList(),
-                    it
-                )
-            }
     }
 
     private data class Execution(

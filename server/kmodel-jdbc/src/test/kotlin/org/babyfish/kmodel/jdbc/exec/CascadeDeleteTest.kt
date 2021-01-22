@@ -16,7 +16,7 @@ import kotlin.test.expect
 
 class CascadeDeleteTest : AbstractJdbcTest() {
 
-    private var foreignKeyBehavior = DeletionOption.NONE
+    private var deletionOption = DeletionOption.NONE
 
     override fun setupDatabase() {
         transaction {
@@ -206,21 +206,41 @@ class CascadeDeleteTest : AbstractJdbcTest() {
         }
     }
 
+    @Test
+    fun testBatchDeleteEmployeeSetNull() {
+        overrideDeletionOption(DeletionOption.SET_NULL) {
+            executeUpdate {
+                expect(listOf(1, 1)) {
+                    connection
+                        .prepareStatement("delete from employee where id = ?")
+                        .apply {
+                            setInt(1, 2)
+                            addBatch()
+                            setInt(1, 5)
+                            addBatch()
+                        }
+                        .executeBatch()
+                        .asList()
+                }
+            }
+        }
+    }
+
     override fun deletionOption(
         foreignKey: ForeignKey
     ): DeletionOption =
-        foreignKeyBehavior
+        deletionOption
 
     private fun <R> overrideDeletionOption(
-        behavior: DeletionOption,
+        option: DeletionOption,
         action: () -> R
     ): R {
-        val oldBehavior = foreignKeyBehavior
-        foreignKeyBehavior = behavior
+        val oldBehavior = deletionOption
+        deletionOption = option
         return try {
             action()
         } finally {
-            foreignKeyBehavior = oldBehavior
+            deletionOption = oldBehavior
         }
     }
 }

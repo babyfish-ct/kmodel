@@ -1,6 +1,7 @@
 package org.babyfish.kmodel.jdbc
 
 import org.babyfish.kmodel.jdbc.exec.ExecutionContext
+import org.babyfish.kmodel.jdbc.exec.RootExecutionContext
 import org.babyfish.kmodel.jdbc.metadata.ForeignKey
 import java.lang.UnsupportedOperationException
 import java.sql.CallableStatement
@@ -19,11 +20,23 @@ open class ConnectionProxy(
         get() {
             var ctx = _executionContext
             if (ctx === null) {
-                ctx = ExecutionContext(cfg)
+                ctx = RootExecutionContext(cfg)
                 _executionContext = ctx
             }
             return ctx
         }
+
+    internal fun <R> usingSubExecutionContext(
+        action: () -> R
+    ): R {
+        val oldExecutionContext = executionContext
+        _executionContext = oldExecutionContext.subContext()
+        return try {
+            action()
+        } finally {
+            _executionContext = oldExecutionContext
+        }
+    }
 
     override fun createStatement(): Statement =
             StatementProxy(
@@ -167,7 +180,12 @@ open class ConnectionProxy(
             throw UnsupportedOperationException()
 
     override fun commit() {
-        _executionContext?.commit(this)
+        _executionContext?.let {
+            if (it !is RootExecutionContext) {
+                error("Only root execution context can be committed")
+            }
+            it.commit(this)
+        }
         _executionContext = null
     }
     

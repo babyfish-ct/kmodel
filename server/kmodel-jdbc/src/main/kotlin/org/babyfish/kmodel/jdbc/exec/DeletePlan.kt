@@ -1,5 +1,6 @@
 package org.babyfish.kmodel.jdbc.exec
 
+import org.babyfish.kmodel.jdbc.ConnectionProxy
 import org.babyfish.kmodel.jdbc.DeletionOption
 import org.babyfish.kmodel.jdbc.SqlLexer
 import org.babyfish.kmodel.jdbc.StatementProxy
@@ -79,7 +80,7 @@ class DeletePlan(
         val updateCount = if (beforeRowMap.isEmpty()) {
             0
         } else {
-            executeCascadeMutations(statementProxy, beforeRowMap)
+            executeCascadeMutations(statementProxy.connection, beforeRowMap)
             mutationStatementBuilderTemplate
                 .clone()
                 .apply {
@@ -99,41 +100,44 @@ class DeletePlan(
     }
 
     private fun executeCascadeMutations(
-        statementProxy: StatementProxy,
+        conProxy: ConnectionProxy,
         beforeRowMap: Map<List<Any>, Row>
     ) {
         if (beforeRowMap.isNotEmpty()) {
-            cascadeMap(statementProxy.targetCon).values.forEach {
-                val behavior = statementProxy
-                    .connection
+            cascadeMap(conProxy.target).values.forEach {
+                val behavior = conProxy
                     .cfg
                     .deletionOptionSupplier
                     ?.invoke(it.exportedKey)
                     ?: DeletionOption.NONE
                 if (behavior == DeletionOption.SET_NULL) {
-                    it
-                        .updateStatementBuilderTemplate
-                        .clone()
-                        .apply {
-                            appendEqualities(
-                                columns = it.exportedKey.childColumns,
-                                rows = beforeRowMap.keys
-                            )
-                        }
-                        .build()
-                        .executeUpdate(statementProxy.connection, null)
+                    conProxy.usingSubExecutionContext {
+                        it
+                            .updateStatementBuilderTemplate
+                            .clone()
+                            .apply {
+                                appendEqualities(
+                                    columns = it.exportedKey.childColumns,
+                                    rows = beforeRowMap.keys
+                                )
+                            }
+                            .build()
+                            .executeUpdate(conProxy, null)
+                    }
                 } else if (behavior == DeletionOption.CASCADE) {
-                    it
-                        .deleteStatementBuilderTemplate
-                        .clone()
-                        .apply {
-                            appendEqualities(
-                                columns = it.exportedKey.childColumns,
-                                rows = beforeRowMap.keys
-                            )
-                        }
-                        .build()
-                        .executeUpdate(statementProxy.connection, null)
+                    conProxy.usingSubExecutionContext {
+                        it
+                            .deleteStatementBuilderTemplate
+                            .clone()
+                            .apply {
+                                appendEqualities(
+                                    columns = it.exportedKey.childColumns,
+                                    rows = beforeRowMap.keys
+                                )
+                            }
+                            .build()
+                            .executeUpdate(conProxy, null)
+                    }
                 }
             }
         }
